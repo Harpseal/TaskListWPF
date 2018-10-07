@@ -4,9 +4,131 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TaskList"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
-    <Grid>
-        
+        mc:Ignorable="d" WindowStyle="None"
+        Title="Task List" Height="350" Width="525" SizeChanged="Window_SizeChanged" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing" ShowInTaskbar="False">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="UIStyleResource.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid MouseEnter="Grid_MouseEnter" MouseLeave="Grid_MouseLeave">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ListView Margin="0" Name="mListView" BorderBrush="WhiteSmoke" AllowDrop="True" PreviewMouseLeftButtonDown="lstView_PreviewMouseLeftButtonDown" MouseMove="lstView_MouseMove" DragEnter="lstView_DragEnter" Drop="lstView_Drop" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SizeChanged="mListView_SizeChanged"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                  ScrollViewer.VerticalScrollBarVisibility="Disabled" VerticalAlignment="Top">
+            <ListView.Resources>
+                <Style TargetType="GridViewColumnHeader">
+                    <Setter Property="Visibility" Value="Hidden" />
+                    <Setter Property="Padding" Value="0" />
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView x:Name="mListGridView" >
+                    <GridViewColumn Header="Ctr." Width="28" >
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Click="Button_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="Button_PreviewMouseDown">
+                                    <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
+                                </Button>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Timer" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Margin="-8,1,-8,0" Text="{Binding TimeStr}"  FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TextBlock_MouseDown" MinWidth="50" TextAlignment="Right" HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Note" Width="100" x:Name="mGridColumnNote">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="14" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
+                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsFocused" Value="True">
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="IsReadOnly" Value="False" />
+                                                    <Setter Property="BorderBrush" Value="LightGray"/>
+                                                </Trigger>
+                                                <Trigger Property="IsFocused" Value="False">
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                    <Setter Property="IsReadOnly" Value="True" />
+                                                    <Setter Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="BorderBrush" Value="#01FFFFFF"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Label Grid.Column="2" x:Name="mLabelTitle" Grid.ColumnSpan="2" Background="Transparent" Content="Task" HorizontalContentAlignment="Center" VerticalAlignment="Top"/>
+        <Grid x:Name="gridControlPanel" Margin="0" UIElement.PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" UIElement.PreviewMouseMove="OnButtonMove_MouseMove" VerticalAlignment="Top">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="24"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" x:Name="btnAdd" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Add task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_add_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+
+            <Button Grid.Column="1" x:Name="btnRemove" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Remove task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_remove_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+
+            <Button Grid.Column="2" x:Name="btnDone" Visibility="Collapsed" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Done" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_done_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+
+            <Button Grid.Column="2" Grid.ColumnSpan="2" x:Name="btnMove" Visibility="Visible" Background="White" Foreground="Black" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="auto" Click="btnTask_Click" Height="24" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="btnMove_PreviewMouseMove" VerticalContentAlignment="Stretch" Opacity="0.1">
+                <Button.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border Background="{TemplateBinding Background}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="Wheat"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+             </Button>
+
+            <ToggleButton Grid.Column="4" IsChecked="False" Style="{StaticResource AlwaysOnTopToggleButtonStyleNoBorder}" x:Name="btnAlwaysOnTop" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnAlwaysOnTop_Click" Height="24" ToolTip="Always On Top" Panel.ZIndex="1" Padding="0" Margin="0" Focusable="False">
+                <Grid>
+                    <Image x:Name="imgAlwaysOnTopUnlock" Source="Resource/Icons/baseline_lock_open_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image x:Name="imgAlwaysOnTopLock" Visibility="Collapsed" Source="Resource/Icons/baseline_lock_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Grid>
+            </ToggleButton>
+
+            <Button Grid.Column="5" x:Name="btnClose" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnClose_Click" Height="24" ToolTip="Close" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove" >
+                <Image Source="Resource/Icons/baseline_clear_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+        </Grid>
     </Grid>
 </Window>
