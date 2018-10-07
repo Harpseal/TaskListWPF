@@ -18,7 +18,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <ListView Margin="0" Name="mListView" BorderBrush="WhiteSmoke" AllowDrop="True" PreviewMouseLeftButtonDown="lstView_PreviewMouseLeftButtonDown" MouseMove="lstView_MouseMove" DragEnter="lstView_DragEnter" Drop="lstView_Drop" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SizeChanged="mListView_SizeChanged"
+        <ListView Margin="0" Name="mListView" BorderBrush="WhiteSmoke" AllowDrop="True" PreviewMouseLeftButtonDown="lstView_PreviewMouseLeftButtonDown" MouseMove="lstView_MouseMove" DragEnter="lstView_DragEnter" Drop="lstView_Drop" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" SelectionChanged="lstView_SelectionChanged"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
                   ScrollViewer.VerticalScrollBarVisibility="Disabled" VerticalAlignment="Top">
             <ListView.Resources>
@@ -32,7 +32,7 @@
                     <GridViewColumn Header="Ctr." Width="28" >
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Click="Button_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="Button_PreviewMouseDown">
+                                <Button Click="Button_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="Button_PreviewMouseDown" ToolTip="R: Top, M: Reset timer">
                                     <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
                                 </Button>
                             </DataTemplate>
@@ -49,7 +49,7 @@
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="14" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
-                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded">
+                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" FontFamily="Microsoft JhengHei">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -85,18 +85,6 @@
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="24"/>
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" x:Name="btnAdd" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Add task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
-                <Image Source="Resource/Icons/baseline_add_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
-            </Button>
-
-            <Button Grid.Column="1" x:Name="btnRemove" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Remove task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
-                <Image Source="Resource/Icons/baseline_remove_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
-            </Button>
-
-            <Button Grid.Column="2" x:Name="btnDone" Visibility="Collapsed" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Done" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
-                <Image Source="Resource/Icons/baseline_done_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
-            </Button>
-
             <Button Grid.Column="2" Grid.ColumnSpan="2" x:Name="btnMove" Visibility="Visible" Background="White" Foreground="Black" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="auto" Click="btnTask_Click" Height="24" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="btnMove_PreviewMouseMove" VerticalContentAlignment="Stretch" Opacity="0.1">
                 <Button.Style>
                     <Style TargetType="{x:Type Button}">
@@ -117,7 +105,23 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
-             </Button>
+            </Button>
+            
+            <Button Grid.Column="0" x:Name="btnAdd" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Add task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_add_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+
+            <Button Grid.Column="1" x:Name="btnRemove" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Remove task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_remove_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
+
+            <Button Grid.Column="2" x:Name="btnUndo" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Remove task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_undo_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Button>
+
+            <Button Grid.Column="2" x:Name="btnDone" Visibility="Collapsed" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Done" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+                <Image Source="Resource/Icons/baseline_done_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
+            </Button>
 
             <ToggleButton Grid.Column="4" IsChecked="False" Style="{StaticResource AlwaysOnTopToggleButtonStyleNoBorder}" x:Name="btnAlwaysOnTop" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnAlwaysOnTop_Click" Height="24" ToolTip="Always On Top" Panel.ZIndex="1" Padding="0" Margin="0" Focusable="False">
                 <Grid>

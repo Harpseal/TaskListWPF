@@ -18,6 +18,9 @@ using System.Windows.Media.Animation;
 using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Windows.Threading;
+using System.ComponentModel;
+using System.Threading;
 
 namespace TaskList
 {
@@ -28,17 +31,70 @@ namespace TaskList
         PASUE,
         STOP
     }
-    [Serializable]
-    public class TaskItem
-    {
 
+    [Serializable]
+    public class TaskItemBase
+    {
         public TaskStatus Status { get; set; }
         public DateTime TimeStart { get; set; }
         public TimeSpan TimeTotal { get; set; }
-        public string TimeStr { get; set; }
-        public string Note { get; set; }
-        
+        public string TimeStrValue { get; set; }
         public bool IsHighlight { get; set; }
+        public string NoteValue { get; set; }
+
+        public void UpdateStatus(TaskStatus status)
+        {
+            Status = status;
+            IsHighlight = status == TaskStatus.WORKING;
+        }
+    }
+
+    
+    public class TaskItem : TaskItemBase, INotifyPropertyChanged
+    {
+        public string TimeStr {
+            get
+            {
+                return TimeStrValue;
+            }
+            set
+            {
+                if (value != this.TimeStrValue)
+                {
+                    this.TimeStrValue = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public string Note
+        {
+            get
+            {
+                return NoteValue;
+            }
+            set
+            {
+                if (value != this.NoteValue)
+                {
+                    this.NoteValue = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private void NotifyPropertyChanged(String propertyName = "")
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        
         public string FontWeight
         {
             get
@@ -81,13 +137,23 @@ namespace TaskList
                 return path;
             }
         }
-        
+
+        public TaskItem(TaskItemBase itemBase)
+        {
+            this.TimeStart = itemBase.TimeStart;
+            this.TimeTotal = itemBase.TimeTotal;
+            this.TimeStrValue = itemBase.TimeStrValue;
+            this.NoteValue = itemBase.NoteValue;
+            UpdateStatus(itemBase.Status);
+        }
+
+
         public TaskItem()
         {
             TimeStart = DateTime.Now;
             TimeTotal = TimeSpan.Zero;
-            TimeStr = "00.00";
-            Note = "note";
+            TimeStrValue = "00.00";
+            NoteValue = "note";
             UpdateStatus(TaskStatus.IDLE);
         }
 
@@ -95,8 +161,8 @@ namespace TaskList
         {
             TimeStart = DateTime.Now;
             TimeTotal = TimeSpan.Zero;
-            TimeStr = "00.00";
-            Note = note;
+            TimeStrValue = "00.00";
+            NoteValue = note;
             UpdateStatus(status);
         }
 
@@ -104,18 +170,12 @@ namespace TaskList
         {
             TimeStart = timeStart;
             TimeTotal = TimeSpan.Zero;
-            TimeStr = "00.00";
-            Note = note;
+            TimeStrValue = "00.00";
+            NoteValue = note;
             UpdateStatus(status);
         }
 
-        public void UpdateStatus(TaskStatus status)
-        {
-            Status = status;
-            IsHighlight = status == TaskStatus.WORKING;
-            //
 
-        }
     }
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -123,7 +183,8 @@ namespace TaskList
     public partial class MainWindow : Window
     {
         private Point mStartPoint = new Point();
-        private ObservableCollection<TaskItem> mTaskItemList = new ObservableCollection<TaskItem>();
+        private ObservableCollection<TaskItem> mTaskItemList = null;
+        private List<TaskItem> mTaskItemUndoList = null;
         private int mStartIndex = -1;
 
         private Storyboard mSBAniOut;
@@ -139,6 +200,8 @@ namespace TaskList
             
             InitializeComponent();
 
+            mTaskItemList = new ObservableCollection<TaskItem>();
+
             this.ShowInTaskbar = TaskList.Properties.Settings.Default.ShowInTaskbar;
             string taskListBase64 = TaskList.Properties.Settings.Default.TaskListBase64;
             if (taskListBase64.Length != 0)
@@ -148,13 +211,27 @@ namespace TaskList
                 BinaryFormatter bf = new BinaryFormatter();
                 MemoryStream ms = new MemoryStream(arr);
                 ms.Position = 0;
-                mTaskItemList = bf.Deserialize(ms) as ObservableCollection<TaskItem>;
+
+                List<TaskItemBase> listBase;
+                
+                try
+                {
+                    listBase = bf.Deserialize(ms) as List<TaskItemBase>;
+                    if (listBase != null)
+                    {
+                        foreach (var itemBase in listBase)
+                            mTaskItemList.Add(new TaskItem(itemBase));
+                    }
+                }
+                catch (System.Runtime.Serialization.SerializationException se)
+                {
+                    Console.WriteLine(se.ToString());
+                }
+                
+
             }
-            else
-                mTaskItemList = new ObservableCollection<TaskItem>();
 
-            UpdateTitle();
-
+            mTaskItemUndoList = new List<TaskItem>();
             mListView.ItemsSource = mTaskItemList;
 
             this.SizeToContent = SizeToContent.WidthAndHeight;
@@ -177,7 +254,7 @@ namespace TaskList
             Storyboard.SetTargetProperty(daFadeIn, new PropertyPath(UIElement.OpacityProperty));
 
             Timer_Tick(null, null);
-            mTimer.Interval = 1000;
+            mTimer.Interval = 500;
             mTimer.Tick += new EventHandler(Timer_Tick);
             mTimer.Start();
 
@@ -210,8 +287,6 @@ namespace TaskList
                     this.ShowInTaskbar = !this.ShowInTaskbar;
                 };
 
-            //System.Windows.Forms.MouseEventHandler mouseHandler = delegate (object sender, System.Windows.Forms.MouseEventArgs e) { };
-
             mNotifyIcon.MouseClick += delegate (object sender, System.Windows.Forms.MouseEventArgs e) {
                 if (e.Button == System.Windows.Forms.MouseButtons.Right)
                 {
@@ -237,7 +312,7 @@ namespace TaskList
                 }
             };
 
-            
+            UpdateUI();
         }
 
         static public Rect CheckBounds(Rect bounds)
@@ -294,21 +369,35 @@ namespace TaskList
             return bounds;
         }
 
-        void UpdateTitle()
+        int UpdateUI()
         {
             int nWorking = 0;
             foreach (var item in mTaskItemList)
                 if (item.Status == TaskStatus.WORKING)
                     nWorking++;
             mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemList.Count + ")";
+
+            RefreshListView();
+            if (nWorking == 0)
+                mTimer.Stop();
+            else
+                mTimer.Start();
+
+            btnRemove.IsEnabled = mListView.SelectedItem != null;
+            if (btnRemove.IsEnabled)
+                btnRemove.Opacity = 1.0;
+            else
+                btnRemove.Opacity = 0.2;
+            btnUndo.Visibility = mTaskItemUndoList.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+
+            return nWorking;
         }
 
-        void Timer_Tick(object sender, EventArgs e)
+        void RefreshListView()
         {
-            //UpdateUI();
-            foreach(var item in mTaskItemList)
+            foreach (var item in mTaskItemList)
             {
-                
+
                 TimeSpan timeDiff = item.TimeTotal;
                 if (item.Status == TaskStatus.WORKING)
                 {
@@ -322,26 +411,32 @@ namespace TaskList
                     item.TimeStr = "59:59:59";
                 else
                     item.TimeStr = timeDiff.ToString(@"h\:mm\:ss");
-                //if (totalSeconds > 9*3600 + 59*60+59)
-                //{
-                //    //item.TimeStr = timeDiff.ToString(@"hh\:mm") + ".0";
-                //    item.TimeStr = timeDiff.ToString(@"h\:mm\:ss");
-                //}
-                //else if (timeDiff.TotalMinutes > 59 * 60 + 59)
-                //{
-                //    item.TimeStr = "59:59";
-                //}
-                //else
-                //{
-                //    //item.TimeStr = ((totalSeconds&1) == 0? timeDiff.ToString(@"mm\ ss") : timeDiff.ToString(@"mm\.ss"));
-                //    item.TimeStr = timeDiff.ToString(@"h\:mm\.ss");
-                //}
-                
+                //Console.WriteLine("item" + item.TimeStr);
             }
-
-            System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
-            view.Refresh();
+            //mListView.Items.Refresh();
+            //System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
+            //view.Refresh();
         }
+
+        void Timer_Tick(object sender, EventArgs e)
+        {
+            RefreshListView();
+
+            if (mResetFocusCountdown > 0)
+            {
+                mResetFocusCountdown -= mTimer.Interval;
+                //Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown);
+                if (mResetFocusCountdown<=0)
+                {
+                    if (mFocusedTextBox != null)
+                    {
+                        mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                        mFocusedTextBox = null;
+                    }
+                    mListView.SelectedItem = null;
+                }
+            }
+         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -354,9 +449,22 @@ namespace TaskList
 
         private bool SaveTaskList()
         {
+            List<TaskItemBase> listBase = new List<TaskItemBase>();
+            foreach (var item in mTaskItemList)
+            {
+                TaskItemBase itemBase = new TaskItemBase();
+                itemBase.Status = item.Status;
+                itemBase.TimeStart = item.TimeStart;
+                itemBase.TimeTotal = item.TimeTotal;
+                itemBase.TimeStrValue = item.TimeStrValue;
+                itemBase.IsHighlight = item.IsHighlight;
+                itemBase.NoteValue = item.NoteValue;
+
+                listBase.Add(itemBase);
+            }
             MemoryStream stream = new MemoryStream();
             BinaryFormatter bf = new BinaryFormatter();
-            bf.Serialize(stream, mTaskItemList);
+            bf.Serialize(stream, listBase);
 
             byte[] arr = new byte[stream.Length];
             stream.Position = 0;
@@ -490,7 +598,6 @@ namespace TaskList
 
         private void TextBlock_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine("TextBlock_MouseDown");
             TextBlock text = sender as TextBlock;
             TaskItem item = text != null ? text.DataContext as TaskItem : null;
             if (item != null)
@@ -547,7 +654,8 @@ namespace TaskList
                 System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
                 view.Refresh();
 
-                UpdateTitle();
+                Timer_Tick(null, null);
+                UpdateUI();
             }
         }
 
@@ -585,8 +693,7 @@ namespace TaskList
         private void OnButtonMove_MouseMove(object sender, MouseEventArgs e)
         {
             MainWindow window = this;
-            //MessageBox.Show("MM");
-            //SystemParameters.MinimumHorizontalDragDistance
+
             Control uiCur = (sender as Control);
             if (uiCur == null) return;
             double minDragDis = 10;// Math.Min(Math.Min(uiCur.ActualWidth, uiCur.ActualHeight) * 0.25, 15);
@@ -649,52 +756,54 @@ namespace TaskList
                 textBox.FontSize,
                 Brushes.Black,
                 new NumberSubstitution(),
-                TextFormattingMode.Display);
+                TextFormattingMode.Ideal);
 
             return new Size(formattedText.Width, formattedText.Height);
         }
 
-        List<TextBox> mTextBoxList = new List<TextBox>();
+        TextBox mEditingTextBox = null;
+        private void UpdateListView()
+        {
+            if (mEditingTextBox == null)
+                return;
+            double maxWidth = MeasureString(mEditingTextBox.Text, mEditingTextBox).Width;
+
+            TaskItem item = mEditingTextBox.DataContext as TaskItem;
+
+            foreach (var task in mTaskItemList)
+            {
+                if (item == task) continue;
+                Size strSize = MeasureString(task.Note, mEditingTextBox);
+                if (maxWidth < strSize.Width)
+                    maxWidth = strSize.Width;
+            }
+
+            //Point relativePoint = textBox.TransformToAncestor(this).Transform(new Point(maxWidth, 0));
+
+            double newWidth = Math.Max(100, maxWidth + 20);
+            if (mListGridView.Columns.Count > 0)
+            {
+                mListGridView.Columns[mListGridView.Columns.Count - 1].Width = newWidth;
+            }
+            //Console.WriteLine("UpdateListView max: " + maxWidth + "  new: " + newWidth  + "[" + mEditingTextBox.Text);
+        }
+        
         private void TextBoxList_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox textBox = sender as TextBox;
             if (textBox == null) return;
 
-            if (!mTextBoxList.Contains(textBox))
-                mTextBoxList.Add(textBox);
-
-            double maxWidth = 0;
-            foreach (var text in mTextBoxList)
-            {
-                
-                Size strSize = MeasureString(text.Text, text);
-                if (maxWidth < strSize.Width)
-                    maxWidth = strSize.Width;
-            }
-
-            Point relativePoint = textBox.TransformToAncestor(this).Transform(new Point(maxWidth, 0));
-
-            if (maxWidth < 64)
-                maxWidth = 64;
-            if (mListGridView.Columns.Count > 1)
-            {
-                mListGridView.Columns[mListGridView.Columns.Count - 1].Width = Math.Max(100, maxWidth + 20);
-            }
-            //Console.WriteLine("TextBoxList_TextChanged");
-            //Console.WriteLine(textBox.ActualWidth.ToString() + " max: " + maxWidth + " win " + relativePoint + "   " + mListGridView.Columns[mListGridView.Columns.Count - 1].Width);
-            //this.Width = relativePoint.X + 32;
+            mEditingTextBox = textBox;
+            UpdateListView();
         }
 
-        private void mListView_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void lstView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            ListView list = sender as ListView;
-            if (list == null) return;
-            Point relativePoint = list.TransformToAncestor(this).Transform(new Point(e.NewSize.Width, e.NewSize.Height));
-            Console.WriteLine("mListView_SizeChanged");
-            Console.WriteLine(this.Height + " -> " + (relativePoint.Y + 32));
-            //this.Height = Math.Max(100, relativePoint.Y + 32);
-            //this.MinWidth = relativePoint.X + 32;
-            Console.WriteLine(list.ActualWidth.ToString() + " x " + list.ActualHeight.ToString() + " " + relativePoint);
+            btnRemove.IsEnabled = mListView.SelectedItem != null;
+            if (btnRemove.IsEnabled)
+                btnRemove.Opacity = 1.0;
+            else
+                btnRemove.Opacity = 0.2;
         }
 
         private void btnTask_Click(object sender, RoutedEventArgs e)
@@ -709,29 +818,51 @@ namespace TaskList
             {
                 int selectedIdx = mListView.SelectedIndex;
                 if (mListView.SelectedItem != null)
+                {
+                    mTaskItemUndoList.Add((TaskItem)mListView.SelectedItem);
                     mTaskItemList.Remove((TaskItem)mListView.SelectedItem);
-                if (selectedIdx >= 0 && selectedIdx < mListView.Items.Count)
+                }
+                if (selectedIdx >= mListView.Items.Count) selectedIdx = mListView.Items.Count - 1;
+                if (selectedIdx >= 0)
                     mListView.SelectedItem = mListView.Items[selectedIdx];
                 //Console.WriteLine("" + (mListView.SelectedItem != null) + " " + mListView.SelectedIndex);
                 //if (mListView.SelectedItem != null && )
             }
+            if (btn == btnUndo)
+            {
+                if (mTaskItemUndoList.Count > 0)
+                {
+                    TaskItem item = mTaskItemUndoList[mTaskItemUndoList.Count - 1];
+                    mTaskItemList.Add(item);
+                    mTaskItemUndoList.Remove(item);
+                }
+            }
+
+            UpdateListView();
+            UpdateUI();
+            
         }
 
-
+        int mResetFocusCountdown = 0;
         private void Grid_MouseEnter(object sender, MouseEventArgs e)
-        {//gridControlPanel
+        {
+            mResetFocusCountdown = 0;
+            UpdateUI();
             mSBAniIn.Begin(gridControlPanel);
         }
 
         private void Grid_MouseLeave(object sender, MouseEventArgs e)
         {
             mSBAniOut.Begin(gridControlPanel);
-            mListView.SelectedItem = null;
+
+            mResetFocusCountdown = 5000;
+            if (!mTimer.Enabled)
+                mTimer.Start();
         }
 
         private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine("Grid_MouseDown");
+            //Console.WriteLine("Grid_MouseDown");
         }
 
         private TextBox mFocusedTextBox = null;
@@ -744,7 +875,7 @@ namespace TaskList
         private void TextBoxList_LostFocus(object sender, RoutedEventArgs e)
         {
             mFocusedTextBox = null;
-            mTimer.Start();
+            UpdateUI();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -774,6 +905,7 @@ namespace TaskList
             }
         }
 
+        List<TextBox> mTextBoxList = new List<TextBox>();
         private void TextBoxList_Loaded(object sender, RoutedEventArgs e)
         {
             TextBox text = sender as TextBox;
@@ -790,9 +922,6 @@ namespace TaskList
                     }
                 }
             }
-
         }
-
-
     }
 }
