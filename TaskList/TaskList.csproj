@@ -173,5 +173,20 @@
   <ItemGroup>
     <Resource Include="Resource\Icons\baseline_undo_black_36dp.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resource\Icons\baseline_unfold_less_black_36dp.png" />
+    <Resource Include="Resource\Icons\baseline_unfold_more_black_36dp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resource\Icons\baseline_save_black_36dp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resource\Icons\baseline_radio_button_checked_black_36dp.png" />
+    <Resource Include="Resource\Icons\baseline_radio_button_unchecked_black_36dp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resource\Icons\baseline_toggle_off_black_36dp.png" />
+    <Resource Include="Resource\Icons\baseline_toggle_on_black_36dp.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

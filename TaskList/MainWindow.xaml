@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TaskList"
         mc:Ignorable="d" WindowStyle="None"
-        Title="Task List" Height="350" Width="525" SizeChanged="Window_SizeChanged" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing" ShowInTaskbar="False">
+        Title="Task List" Height="350" Width="525" SizeChanged="Window_SizeChanged" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing" ShowInTaskbar="False" 
+        AllowsTransparency="True"  Background="Transparent">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -14,7 +15,10 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid MouseEnter="Grid_MouseEnter" MouseLeave="Grid_MouseLeave">
+    <Grid MouseEnter="Grid_MouseEnter" MouseLeave="Grid_MouseLeave"  Margin="10" >
+        <Grid.Effect>
+            <DropShadowEffect BlurRadius="15" Direction="-90" RenderingBias="Quality" ShadowDepth="2"/>
+        </Grid.Effect>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -27,6 +31,13 @@
                     <Setter Property="Padding" Value="0" />
                 </Style>
             </ListView.Resources>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.View>
                 <GridView x:Name="mListGridView" >
                     <GridViewColumn Header="Ctr." Width="28" >
@@ -38,10 +49,12 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Timer" Width="50">
+                    <GridViewColumn x:Name="TimerHeader" Header="Timer" Width="50">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Margin="-8,1,-8,0" Text="{Binding TimeStr}"  FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TextBlock_MouseDown" MinWidth="50" TextAlignment="Right" HorizontalAlignment="Center"/>
+                                
+                                <TextBlock  Text="{Binding TimeStr}" Margin="-8,1,-8,0" FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TextBlock_MouseDown" MinWidth="{Binding Width, ElementName=TimerHeader}"  TextAlignment="Right"  HorizontalAlignment="Right"/>
+                                
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
@@ -75,13 +88,15 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Grid.Column="2" x:Name="mLabelTitle" Grid.ColumnSpan="2" Background="Transparent" Content="Task" HorizontalContentAlignment="Center" VerticalAlignment="Top"/>
+        <Label Grid.Column="2" x:Name="mLabelTitle" Grid.ColumnSpan="2" Background="Transparent" Content="Task" HorizontalContentAlignment="Center" VerticalAlignment="Top">
+        </Label>
         <Grid x:Name="gridControlPanel" Margin="0" UIElement.PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" UIElement.PreviewMouseMove="OnButtonMove_MouseMove" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="24"/>
             </Grid.ColumnDefinitions>
@@ -105,6 +120,38 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="mMenuSave" Height="28" Click="MenuItem_Click">
+                            <MenuItem.Icon>
+                                <Image Source="Resource/Icons/baseline_save_black_36dp.png" Width="20" Height="20" />
+                            </MenuItem.Icon>
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Save</AccessText>
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem x:Name="mMenuLoad" Height="28" Click="MenuItem_Click">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Load</AccessText>
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem x:Name="mMenuExit" Height="28" Click="MenuItem_Click">
+                            <MenuItem.Icon>
+                                <Image Source="Resource/Icons/baseline_clear_black_36dp.png" Width="20" Height="20" />
+                            </MenuItem.Icon>
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Exit</AccessText>
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </ContextMenu>
+                </Button.ContextMenu>
             </Button>
             
             <Button Grid.Column="0" x:Name="btnAdd" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Add task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
@@ -115,7 +162,7 @@
                 <Image Source="Resource/Icons/baseline_remove_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
             </Button>
 
-            <Button Grid.Column="2" x:Name="btnUndo" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Remove task" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
+            <Button Grid.Column="2" x:Name="btnUndo" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnTask_Click" Height="24" ToolTip="Undo remove" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove">
                 <Image Source="Resource/Icons/baseline_undo_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality"/>
             </Button>
 
@@ -123,14 +170,21 @@
                 <Image Source="Resource/Icons/baseline_done_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
             </Button>
 
-            <ToggleButton Grid.Column="4" IsChecked="False" Style="{StaticResource AlwaysOnTopToggleButtonStyleNoBorder}" x:Name="btnAlwaysOnTop" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnAlwaysOnTop_Click" Height="24" ToolTip="Always On Top" Panel.ZIndex="1" Padding="0" Margin="0" Focusable="False">
+            <ToggleButton Grid.Column="4" IsChecked="False" Style="{StaticResource AlwaysOnTopToggleButtonStyleNoBorder}" x:Name="btnFold" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnFold_Click" Height="24" ToolTip="Fold/Unfold" Panel.ZIndex="1" Padding="0" Margin="0" Focusable="False">
                 <Grid>
-                    <Image x:Name="imgAlwaysOnTopUnlock" Source="Resource/Icons/baseline_lock_open_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <Image x:Name="imgAlwaysOnTopLock" Visibility="Collapsed" Source="Resource/Icons/baseline_lock_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image x:Name="imgUnfold" Source="Resource/Icons/baseline_unfold_less_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image x:Name="imgFold" Visibility="Collapsed" Source="Resource/Icons/baseline_unfold_more_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Grid>
+            </ToggleButton>
+            
+            <ToggleButton Grid.Column="5" IsChecked="False" Style="{StaticResource AlwaysOnTopToggleButtonStyleNoBorder}" x:Name="btnAlwaysOnTop" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnAlwaysOnTop_Click" Height="24" ToolTip="Always On Top" Panel.ZIndex="1" Padding="0" Margin="0" Focusable="False">
+                <Grid>
+                    <Image x:Name="imgAlwaysOnTopUnlock" Source="Resource/Icons/baseline_toggle_off_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image x:Name="imgAlwaysOnTopLock" Source="Resource/Icons/baseline_toggle_on_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" RenderOptions.BitmapScalingMode="HighQuality" Visibility="Collapsed"/>
                 </Grid>
             </ToggleButton>
 
-            <Button Grid.Column="5" x:Name="btnClose" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnClose_Click" Height="24" ToolTip="Close" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove" >
+            <Button Grid.Column="6" x:Name="btnClose" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnClose_Click" Height="24" ToolTip="Close" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove" >
                 <Image Source="Resource/Icons/baseline_clear_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
             </Button>
         </Grid>

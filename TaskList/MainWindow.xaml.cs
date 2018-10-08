@@ -38,7 +38,7 @@ namespace TaskList
         public TaskStatus Status { get; set; }
         public DateTime TimeStart { get; set; }
         public TimeSpan TimeTotal { get; set; }
-        public string TimeStrValue { get; set; }
+        public string TimeStr { get; set; }
         public bool IsHighlight { get; set; }
         public string NoteValue { get; set; }
 
@@ -50,18 +50,61 @@ namespace TaskList
     }
 
     
-    public class TaskItem : TaskItemBase, INotifyPropertyChanged
+    public class TaskItem : INotifyPropertyChanged
     {
+        public TaskItemBase mBase { get; }
         public string TimeStr {
             get
             {
-                return TimeStrValue;
+                return mBase.TimeStr;
             }
             set
             {
-                if (value != this.TimeStrValue)
+                if (value != this.mBase.TimeStr)
                 {
-                    this.TimeStrValue = value;
+                    this.mBase.TimeStr = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public TaskStatus Status
+        {
+            get
+            {  return mBase.Status;  }
+            set
+            {
+                if (value != this.mBase.Status)
+                {
+                    this.mBase.Status = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime TimeStart
+        {
+            get
+            { return mBase.TimeStart; }
+            set
+            {
+                if (value != this.mBase.TimeStart)
+                {
+                    this.mBase.TimeStart = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public TimeSpan TimeTotal
+        {
+            get
+            { return mBase.TimeTotal; }
+            set
+            {
+                if (value != this.mBase.TimeTotal)
+                {
+                    this.mBase.TimeTotal = value;
                     NotifyPropertyChanged();
                 }
             }
@@ -71,17 +114,18 @@ namespace TaskList
         {
             get
             {
-                return NoteValue;
+                return mBase.NoteValue;
             }
             set
             {
-                if (value != this.NoteValue)
+                if (value != this.mBase.NoteValue)
                 {
-                    this.NoteValue = value;
-                    NotifyPropertyChanged();
+                    this.mBase.NoteValue = value;
+                    //NotifyPropertyChanged();
                 }
             }
         }
+
 
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -99,7 +143,7 @@ namespace TaskList
         {
             get
             {
-                if (IsHighlight) return "Bold";
+                if (mBase.IsHighlight) return "Bold";
                 else return "Normal";
             }
 
@@ -109,7 +153,7 @@ namespace TaskList
         {
             get
             {
-                if (IsHighlight) return Brushes.Black;
+                if (mBase.IsHighlight) return Brushes.Black;
                 else return new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
             }
         }
@@ -121,7 +165,7 @@ namespace TaskList
                 //string imageUri = "pack://application:,,,/TaskList;component/Resource/Icons/";
                 //string imageUri = "pack://application:,,,/component/Resource/Icons/";
                 string path = "Resource/Icons/";
-                switch (Status)
+                switch (mBase.Status)
                 {
 
                     case TaskStatus.WORKING:
@@ -140,41 +184,46 @@ namespace TaskList
 
         public TaskItem(TaskItemBase itemBase)
         {
-            this.TimeStart = itemBase.TimeStart;
-            this.TimeTotal = itemBase.TimeTotal;
-            this.TimeStrValue = itemBase.TimeStrValue;
-            this.NoteValue = itemBase.NoteValue;
-            UpdateStatus(itemBase.Status);
+            mBase = itemBase;
+            mBase.UpdateStatus(itemBase.Status);
         }
 
 
         public TaskItem()
         {
-            TimeStart = DateTime.Now;
-            TimeTotal = TimeSpan.Zero;
-            TimeStrValue = "00.00";
-            NoteValue = "note";
-            UpdateStatus(TaskStatus.IDLE);
+            mBase = new TaskItemBase();
+            mBase.TimeStart = DateTime.Now;
+            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeStr = "00.00";
+            mBase.NoteValue = "note";
+            mBase.UpdateStatus(TaskStatus.IDLE);
         }
 
         public TaskItem(TaskStatus status, string note)
         {
-            TimeStart = DateTime.Now;
-            TimeTotal = TimeSpan.Zero;
-            TimeStrValue = "00.00";
-            NoteValue = note;
-            UpdateStatus(status);
+            mBase = new TaskItemBase();
+            mBase.TimeStart = DateTime.Now;
+            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeStr = "00.00";
+            mBase.NoteValue = note;
+            mBase.UpdateStatus(status);
         }
 
         public TaskItem(TaskStatus status, DateTime timeStart, string note)
         {
-            TimeStart = timeStart;
-            TimeTotal = TimeSpan.Zero;
-            TimeStrValue = "00.00";
-            NoteValue = note;
-            UpdateStatus(status);
+            mBase = new TaskItemBase();
+            mBase.TimeStart = timeStart;
+            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeStr = "00.00";
+            mBase.NoteValue = note;
+            mBase.UpdateStatus(status);
         }
 
+        public void UpdateStatus(TaskStatus status)
+        {
+            if (mBase == null) return;
+            mBase.UpdateStatus(status);
+        }
 
     }
     /// <summary>
@@ -183,7 +232,8 @@ namespace TaskList
     public partial class MainWindow : Window
     {
         private Point mStartPoint = new Point();
-        private ObservableCollection<TaskItem> mTaskItemList = null;
+        private ObservableCollection<TaskItem> mTaskItemAllCollection = null;
+        private ObservableCollection<TaskItem> mTaskItemWorkingCollection = null;
         private List<TaskItem> mTaskItemUndoList = null;
         private int mStartIndex = -1;
 
@@ -193,6 +243,8 @@ namespace TaskList
         private System.Windows.Forms.Timer mTimer = new System.Windows.Forms.Timer();
         private bool mIsFirstTime = true;
 
+        public const int MinNoteWidth = 120;
+
         System.Windows.Forms.NotifyIcon mNotifyIcon = null;
         public MainWindow()
         {
@@ -200,7 +252,8 @@ namespace TaskList
             
             InitializeComponent();
 
-            mTaskItemList = new ObservableCollection<TaskItem>();
+            mTaskItemAllCollection = new ObservableCollection<TaskItem>();
+            mTaskItemWorkingCollection = new ObservableCollection<TaskItem>();
 
             this.ShowInTaskbar = TaskList.Properties.Settings.Default.ShowInTaskbar;
             string taskListBase64 = TaskList.Properties.Settings.Default.TaskListBase64;
@@ -212,15 +265,15 @@ namespace TaskList
                 MemoryStream ms = new MemoryStream(arr);
                 ms.Position = 0;
 
-                List<TaskItemBase> listBase;
+                List<TaskItemBase> baseList = new List<TaskItemBase>();
                 
                 try
                 {
-                    listBase = bf.Deserialize(ms) as List<TaskItemBase>;
-                    if (listBase != null)
+                    baseList = bf.Deserialize(ms) as List<TaskItemBase>;
+                    if (baseList != null)
                     {
-                        foreach (var itemBase in listBase)
-                            mTaskItemList.Add(new TaskItem(itemBase));
+                        foreach (var itemBase in baseList)
+                            mTaskItemAllCollection.Add(new TaskItem(itemBase));
                     }
                 }
                 catch (System.Runtime.Serialization.SerializationException se)
@@ -230,9 +283,8 @@ namespace TaskList
                 
 
             }
-
             mTaskItemUndoList = new List<TaskItem>();
-            mListView.ItemsSource = mTaskItemList;
+            mListView.ItemsSource = mTaskItemAllCollection;
 
             this.SizeToContent = SizeToContent.WidthAndHeight;
 
@@ -315,6 +367,36 @@ namespace TaskList
             UpdateUI();
         }
 
+        //ref: https://www.codeproject.com/Articles/487571/XML-Serialization-and-Deserialization-Part-2
+        private void SerializeList(List<TaskItemBase> list, string TargetPath)
+        {
+            System.Xml.Serialization.XmlSerializer serializer = new System.Xml.Serialization.XmlSerializer(typeof(List<TaskItemBase>));
+            using (TextWriter writer = new StreamWriter(TargetPath))
+            {
+                serializer.Serialize(writer, list);
+            }
+        }
+
+        private List<TaskItemBase> DeserializeList(string TargetPath)
+        {
+            System.Xml.Serialization.XmlSerializer deserializer = new System.Xml.Serialization.XmlSerializer(typeof(List<TaskItemBase>));
+            TextReader reader = new StreamReader(TargetPath);
+            List<TaskItemBase> list = null;
+            try
+            {
+                object obj = deserializer.Deserialize(reader);
+                list = (List<TaskItemBase>)obj;
+            }
+            catch (System.InvalidOperationException e)
+            {
+                Console.WriteLine(e.ToString());
+                list = null;
+            }
+
+            reader.Close();
+            return list;
+        }
+
         static public Rect CheckBounds(Rect bounds)
         {
             int iInsideLT, iInsideRB;
@@ -372,10 +454,10 @@ namespace TaskList
         int UpdateUI()
         {
             int nWorking = 0;
-            foreach (var item in mTaskItemList)
+            foreach (var item in mTaskItemAllCollection)
                 if (item.Status == TaskStatus.WORKING)
                     nWorking++;
-            mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemList.Count + ")";
+            mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemAllCollection.Count + ")";
 
             RefreshListView();
             if (nWorking == 0)
@@ -393,29 +475,60 @@ namespace TaskList
             return nWorking;
         }
 
+        private double MinTimeWidth = 40;
+        private double MidTimeWidth = 45;
+        private double MaxTimeWidth = 55;
         void RefreshListView()
         {
-            foreach (var item in mTaskItemList)
+            bool isMidTimeWidth = false;
+            bool isMaxTimeWidth = false;
+            foreach (var item in mTaskItemAllCollection)
             {
 
-                TimeSpan timeDiff = item.TimeTotal;
+                TimeSpan timeDiff = item.mBase.TimeTotal;
                 if (item.Status == TaskStatus.WORKING)
                 {
-                    timeDiff += DateTime.Now - item.TimeStart;
+                    timeDiff += DateTime.Now - item.mBase.TimeStart;
                 }
-                //timeDiff += new TimeSpan(10, 0, 0);
-                int totalSeconds = (int)timeDiff.TotalSeconds;
-                if (totalSeconds <= 59 * 60 + 59)
+                //timeDiff += new TimeSpan(9,4, 0);
+                //int totalSeconds = (int)timeDiff.TotalSeconds;
+                if (timeDiff.TotalMinutes < 60)
                     item.TimeStr = timeDiff.ToString(@"mm\:ss");
-                else if (timeDiff.TotalMinutes > 59 * 60 + 59)
+                else if (timeDiff.TotalHours >= 60)
+                { 
                     item.TimeStr = "59:59:59";
+                    isMaxTimeWidth = true;
+                }
                 else
+                {
+                    isMaxTimeWidth |= timeDiff.TotalHours >= 10;
+                    isMidTimeWidth |= !isMaxTimeWidth;
                     item.TimeStr = timeDiff.ToString(@"h\:mm\:ss");
+                }
                 //Console.WriteLine("item" + item.TimeStr);
             }
             //mListView.Items.Refresh();
             //System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
             //view.Refresh();
+            if (mListGridView.Columns.Count >= 2)
+            {
+                double oldWidth = mListGridView.Columns[1].Width;
+                if (isMaxTimeWidth)
+                {
+                    if (oldWidth != MaxTimeWidth)
+                        mListGridView.Columns[1].Width = MaxTimeWidth;
+                }
+                else if (isMidTimeWidth)
+                {
+                    if (oldWidth != MidTimeWidth)
+                        mListGridView.Columns[1].Width = MidTimeWidth;
+                }
+                else
+                {
+                    if (oldWidth != MinTimeWidth)
+                        mListGridView.Columns[1].Width = MinTimeWidth;
+                }
+            }
         }
 
         void Timer_Tick(object sender, EventArgs e)
@@ -441,26 +554,19 @@ namespace TaskList
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             btnAlwaysOnTop.IsChecked = TaskList.Properties.Settings.Default.AlwaysOnTop;
-            if (btnAlwaysOnTop.IsChecked == true)
-                this.ToggleAlwaysOnTop();
+            ToggleAlwaysOnTop();
 
             mSBAniOut.Begin(gridControlPanel);
         }
 
+
+
         private bool SaveTaskList()
         {
             List<TaskItemBase> listBase = new List<TaskItemBase>();
-            foreach (var item in mTaskItemList)
+            foreach (var item in mTaskItemAllCollection)
             {
-                TaskItemBase itemBase = new TaskItemBase();
-                itemBase.Status = item.Status;
-                itemBase.TimeStart = item.TimeStart;
-                itemBase.TimeTotal = item.TimeTotal;
-                itemBase.TimeStrValue = item.TimeStrValue;
-                itemBase.IsHighlight = item.IsHighlight;
-                itemBase.NoteValue = item.NoteValue;
-
-                listBase.Add(itemBase);
+                listBase.Add(item.mBase);
             }
             MemoryStream stream = new MemoryStream();
             BinaryFormatter bf = new BinaryFormatter();
@@ -554,10 +660,10 @@ namespace TaskList
                 // Move item into observable collection 
                 // (this will be automatically reflected to lstView.ItemsSource)
                 e.Effects = DragDropEffects.Move;
-                index = mTaskItemList.IndexOf(item);
+                index = mTaskItemAllCollection.IndexOf(item);
                 if (mStartIndex >= 0 && index >= 0)
                 {
-                    mTaskItemList.Move(mStartIndex, index);
+                    mTaskItemAllCollection.Move(mStartIndex, index);
                 }
                 mStartIndex = -1;        // Done!
             }
@@ -572,9 +678,9 @@ namespace TaskList
             {
                 if (e.RightButton == MouseButtonState.Pressed)
                 {
-                    int idx = mTaskItemList.IndexOf(item);
+                    int idx = mTaskItemAllCollection.IndexOf(item);
                     if (idx>0)
-                        mTaskItemList.Move(idx, 0);
+                        mTaskItemAllCollection.Move(idx, 0);
                     Console.WriteLine("RightButton " + idx);
                     e.Handled = true;
                 }
@@ -626,7 +732,7 @@ namespace TaskList
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
             if (item != null)
             {
-                int idx = mTaskItemList.IndexOf(item);
+                int idx = mTaskItemAllCollection.IndexOf(item);
 
                 switch (item.Status)
                 {
@@ -675,6 +781,33 @@ namespace TaskList
 
             imgAlwaysOnTopUnlock.Visibility = btnAlwaysOnTop.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
             imgAlwaysOnTopLock.Visibility = btnAlwaysOnTop.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
+            btnAlwaysOnTop.ToolTip = "Always On Top (" + (btnAlwaysOnTop.IsChecked==true ? "enabled" : "disabled") + ")";
+        }
+
+        private void btnFold_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleFolding();
+        }
+
+        private void ToggleFolding()
+        {
+            bool isFolding = btnFold.IsChecked.HasValue && btnFold.IsChecked.Value;
+
+            imgUnfold.Visibility = isFolding == true ? Visibility.Collapsed : Visibility.Visible;
+            imgFold.Visibility = isFolding == false ? Visibility.Collapsed : Visibility.Visible;
+
+            if (isFolding)
+            {
+                mTaskItemWorkingCollection.Clear();
+                foreach (var item in mTaskItemAllCollection)
+                    if (item.Status == TaskStatus.WORKING)
+                        mTaskItemWorkingCollection.Add(item);
+                mListView.ItemsSource = mTaskItemWorkingCollection;
+            }
+            else
+            {
+                mListView.ItemsSource = mTaskItemAllCollection;
+            }
         }
 
         private System.Windows.Point m_MousePosition;
@@ -770,7 +903,7 @@ namespace TaskList
 
             TaskItem item = mEditingTextBox.DataContext as TaskItem;
 
-            foreach (var task in mTaskItemList)
+            foreach (var task in mTaskItemAllCollection)
             {
                 if (item == task) continue;
                 Size strSize = MeasureString(task.Note, mEditingTextBox);
@@ -780,7 +913,7 @@ namespace TaskList
 
             //Point relativePoint = textBox.TransformToAncestor(this).Transform(new Point(maxWidth, 0));
 
-            double newWidth = Math.Max(100, maxWidth + 20);
+            double newWidth = Math.Max(MinNoteWidth, maxWidth + 20);
             if (mListGridView.Columns.Count > 0)
             {
                 mListGridView.Columns[mListGridView.Columns.Count - 1].Width = newWidth;
@@ -793,6 +926,12 @@ namespace TaskList
             TextBox textBox = sender as TextBox;
             if (textBox == null) return;
 
+            TaskItem item = textBox != null ? textBox.DataContext as TaskItem : null;
+
+            if (item != null)
+                item.Note = textBox.Text;
+
+            mResetFocusCountdown = 5000;
             mEditingTextBox = textBox;
             UpdateListView();
         }
@@ -812,7 +951,7 @@ namespace TaskList
             if (btn == null) return;
             if (btn == btnAdd)
             {
-                mTaskItemList.Insert(0, new TaskItem(TaskStatus.IDLE, "Task " + mTaskItemList.Count));
+                mTaskItemAllCollection.Insert(0, new TaskItem(TaskStatus.IDLE, "Task " + mTaskItemAllCollection.Count));
             }
             if (btn == btnRemove)
             {
@@ -820,7 +959,7 @@ namespace TaskList
                 if (mListView.SelectedItem != null)
                 {
                     mTaskItemUndoList.Add((TaskItem)mListView.SelectedItem);
-                    mTaskItemList.Remove((TaskItem)mListView.SelectedItem);
+                    mTaskItemAllCollection.Remove((TaskItem)mListView.SelectedItem);
                 }
                 if (selectedIdx >= mListView.Items.Count) selectedIdx = mListView.Items.Count - 1;
                 if (selectedIdx >= 0)
@@ -833,7 +972,7 @@ namespace TaskList
                 if (mTaskItemUndoList.Count > 0)
                 {
                     TaskItem item = mTaskItemUndoList[mTaskItemUndoList.Count - 1];
-                    mTaskItemList.Add(item);
+                    mTaskItemAllCollection.Add(item);
                     mTaskItemUndoList.Remove(item);
                 }
             }
@@ -882,7 +1021,7 @@ namespace TaskList
         {
             if (mFocusedTextBox!=null)
                 mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-            foreach (var item in mTaskItemList)
+            foreach (var item in mTaskItemAllCollection)
                 Console.WriteLine(item.Note);
             SaveTaskList();
 
@@ -913,13 +1052,61 @@ namespace TaskList
             {
                 if (text != null)
                 {
-                    if (mTextBoxList.Count < mTaskItemList.Count && !mTextBoxList.Contains(text))
+                    if (mTextBoxList.Count < mTaskItemAllCollection.Count && !mTextBoxList.Contains(text))
                         mTextBoxList.Add(text);
-                    if (mTextBoxList.Count >= mTaskItemList.Count)
+                    if (mTextBoxList.Count >= mTaskItemAllCollection.Count)
                     {
                         mIsFirstTime = false;
                         TextBoxList_TextChanged(sender, null);
                     }
+                }
+            }
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender == mMenuExit)
+                this.Close();
+            else if (sender == mMenuLoad)
+            {
+                Microsoft.Win32.OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog();
+                openFileDialog.Filter = "Xml file (*.xml)|*.xml|All file (*.*)|*.*";
+                if (openFileDialog.ShowDialog() == true)
+                {
+                    List<TaskItemBase> listBase = DeserializeList(openFileDialog.FileName);
+                    if (listBase != null)
+                    {
+                        mTaskItemAllCollection.Clear();
+                        foreach (var item in listBase)
+                        {
+                            mTaskItemAllCollection.Add(new TaskItem(item));
+                        }
+                        UpdateUI();
+                        btnFold.IsChecked = false;
+                        ToggleFolding();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Can\'t open xml file named : " + openFileDialog.FileName, "Error",
+                             MessageBoxButton.OK,
+                             MessageBoxImage.Error);
+                    }
+
+                }
+            }
+            else if (sender == mMenuSave)
+            {
+                Microsoft.Win32.SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
+                saveFileDialog.Filter = "Xml file (*.xml)|*.xml|All file (*.*)|*.*";
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    List<TaskItemBase> listBase = new List<TaskItemBase>();
+                    foreach (var item in mTaskItemAllCollection)
+                    {
+                        listBase.Add(item.mBase);
+                    }
+                    SerializeList(listBase, saveFileDialog.FileName);
+
                 }
             }
         }
