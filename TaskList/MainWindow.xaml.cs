@@ -37,7 +37,7 @@ namespace TaskList
     {
         public TaskStatus Status { get; set; }
         public DateTime TimeStart { get; set; }
-        public TimeSpan TimeTotal { get; set; }
+        public double TimeTotalSeconds { get; set; }
         public string TimeStr { get; set; }
         public bool IsHighlight { get; set; }
         public string NoteValue { get; set; }
@@ -99,12 +99,12 @@ namespace TaskList
         public TimeSpan TimeTotal
         {
             get
-            { return mBase.TimeTotal; }
+            { return TimeSpan.FromSeconds(mBase.TimeTotalSeconds);  }
             set
             {
-                if (value != this.mBase.TimeTotal)
+                if (value.TotalSeconds != this.mBase.TimeTotalSeconds)
                 {
-                    this.mBase.TimeTotal = value;
+                    this.mBase.TimeTotalSeconds = value.TotalSeconds;
                     NotifyPropertyChanged();
                 }
             }
@@ -193,7 +193,7 @@ namespace TaskList
         {
             mBase = new TaskItemBase();
             mBase.TimeStart = DateTime.Now;
-            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeTotalSeconds = 0;
             mBase.TimeStr = "00.00";
             mBase.NoteValue = "note";
             mBase.UpdateStatus(TaskStatus.IDLE);
@@ -203,7 +203,7 @@ namespace TaskList
         {
             mBase = new TaskItemBase();
             mBase.TimeStart = DateTime.Now;
-            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeTotalSeconds = 0;
             mBase.TimeStr = "00.00";
             mBase.NoteValue = note;
             mBase.UpdateStatus(status);
@@ -213,7 +213,7 @@ namespace TaskList
         {
             mBase = new TaskItemBase();
             mBase.TimeStart = timeStart;
-            mBase.TimeTotal = TimeSpan.Zero;
+            mBase.TimeTotalSeconds = 0;
             mBase.TimeStr = "00.00";
             mBase.NoteValue = note;
             mBase.UpdateStatus(status);
@@ -485,7 +485,7 @@ namespace TaskList
             foreach (var item in mTaskItemAllCollection)
             {
 
-                TimeSpan timeDiff = item.mBase.TimeTotal;
+                TimeSpan timeDiff = item.TimeTotal;
                 if (item.Status == TaskStatus.WORKING)
                 {
                     timeDiff += DateTime.Now - item.mBase.TimeStart;
