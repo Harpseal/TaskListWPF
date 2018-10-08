@@ -61,7 +61,7 @@
                     <GridViewColumn Header="Note" Width="100" x:Name="mGridColumnNote">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="14" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
+                                <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
                                          GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" FontFamily="Microsoft JhengHei">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">

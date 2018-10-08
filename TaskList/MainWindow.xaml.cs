@@ -39,13 +39,11 @@ namespace TaskList
         public DateTime TimeStart { get; set; }
         public double TimeTotalSeconds { get; set; }
         public string TimeStr { get; set; }
-        public bool IsHighlight { get; set; }
         public string NoteValue { get; set; }
 
         public void UpdateStatus(TaskStatus status)
         {
             Status = status;
-            IsHighlight = status == TaskStatus.WORKING;
         }
     }
 
@@ -138,12 +136,21 @@ namespace TaskList
             }
         }
 
-        
+
+        public bool IsHighlight
+        {
+            get
+            {
+                return mBase.Status == TaskStatus.WORKING;
+            }
+
+        }
+
         public string FontWeight
         {
             get
             {
-                if (mBase.IsHighlight) return "Bold";
+                if (IsHighlight) return "Bold";
                 else return "Normal";
             }
 
@@ -153,7 +160,7 @@ namespace TaskList
         {
             get
             {
-                if (mBase.IsHighlight) return Brushes.Black;
+                if (IsHighlight) return Brushes.Black;
                 else return new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
             }
         }
@@ -1098,6 +1105,7 @@ namespace TaskList
             {
                 Microsoft.Win32.SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
                 saveFileDialog.Filter = "Xml file (*.xml)|*.xml|All file (*.*)|*.*";
+                saveFileDialog.FileName = "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + ".xml"; 
                 if (saveFileDialog.ShowDialog() == true)
                 {
                     List<TaskItemBase> listBase = new List<TaskItemBase>();
