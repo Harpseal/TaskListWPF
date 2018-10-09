@@ -70,5 +70,41 @@ namespace TaskList.Properties {
                 this["ShowInTaskbar"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string AutoSavePath {
+            get {
+                return ((string)(this["AutoSavePath"]));
+            }
+            set {
+                this["AutoSavePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableAutoSave {
+            get {
+                return ((bool)(this["EnableAutoSave"]));
+            }
+            set {
+                this["EnableAutoSave"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableAutoSaveProgressBar {
+            get {
+                return ((bool)(this["EnableAutoSaveProgressBar"]));
+            }
+            set {
+                this["EnableAutoSaveProgressBar"] = value;
+            }
+        }
     }
 }

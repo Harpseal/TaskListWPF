@@ -46,8 +46,7 @@ namespace TaskList
             Status = status;
         }
     }
-
-    
+ 
     public class TaskItem : INotifyPropertyChanged
     {
         public TaskItemBase mBase { get; }
@@ -252,11 +251,13 @@ namespace TaskList
 
         public const int MinNoteWidth = 120;
 
+        private const int mAutoSaveCountdownTotal =  5 * 60 * 1000; //5 mins
+        private int mAutoSaveCountdown = 0;
+        private int mResetFocusCountdown = 0;
+
         System.Windows.Forms.NotifyIcon mNotifyIcon = null;
         public MainWindow()
         {
-
-            
             InitializeComponent();
 
             mTaskItemAllCollection = new ObservableCollection<TaskItem>();
@@ -363,11 +364,6 @@ namespace TaskList
                     this.Show();
                     this.WindowState = WindowState.Normal;
                     this.Activate();
-                    //this.Show();
-                    //if (this.WindowState == WindowState.Minimized)
-                    //    this.WindowState = WindowState.Normal;
-                    //else
-                    //    this.WindowState = WindowState.Minimized;
                 }
             };
 
@@ -467,9 +463,9 @@ namespace TaskList
             mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemAllCollection.Count + ")";
 
             RefreshListView();
-            if (nWorking == 0)
+            if (nWorking == 0 && mAutoSaveCountdown == 0 && mResetFocusCountdown == 0)
                 mTimer.Stop();
-            else
+            else if (!mTimer.Enabled)
                 mTimer.Start();
 
             btnRemove.IsEnabled = mListView.SelectedItem != null;
@@ -501,9 +497,9 @@ namespace TaskList
                 //int totalSeconds = (int)timeDiff.TotalSeconds;
                 if (timeDiff.TotalMinutes < 60)
                     item.TimeStr = timeDiff.ToString(@"mm\:ss");
-                else if (timeDiff.TotalHours >= 60)
+                else if (timeDiff.TotalHours >= 24)
                 { 
-                    item.TimeStr = "59:59:59";
+                    item.TimeStr = "23:59:59";
                     isMaxTimeWidth = true;
                 }
                 else
@@ -556,12 +552,73 @@ namespace TaskList
                     mListView.SelectedItem = null;
                 }
             }
+
+            if (!mMenuAutoSave.IsChecked)
+            {
+                mAutoSaveCountdown = 0;
+                mProgressBarAutoSave.Visibility = Visibility.Collapsed;
+            }
+            else if (mAutoSaveCountdown > 0)
+            {
+                if (mMenuAutoSaveShowProgress.IsChecked)
+                {
+                    if (mProgressBarAutoSave.Visibility != Visibility.Visible)
+                        mProgressBarAutoSave.Visibility = Visibility.Visible;
+                    mProgressBarAutoSave.Value = (1.0 - (float)mAutoSaveCountdown / mAutoSaveCountdownTotal) * mProgressBarAutoSave.Maximum;
+                }
+                else
+                {
+                    if (mProgressBarAutoSave.Visibility != Visibility.Collapsed)
+                        mProgressBarAutoSave.Visibility = Visibility.Collapsed;
+                }
+                mAutoSaveCountdown -= mTimer.Interval;
+                Console.WriteLine("mAutoSaveCountdown " + mAutoSaveCountdown + "  " + mMenuAutoSave.IsChecked + " " + mProgressBarAutoSave.Value);
+                SaveTaskList();
+                if (mAutoSaveCountdown <= 0 && mMenuAutoSave.IsChecked == true)
+                {
+                    mProgressBarAutoSave.Visibility = Visibility.Collapsed;
+                    string savePath = TaskList.Properties.Settings.Default.AutoSavePath;
+                    if (Directory.Exists(savePath))
+                    {
+                        if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith(""+System.IO.Path.DirectorySeparatorChar))
+                            savePath += System.IO.Path.DirectorySeparatorChar;// System.IO.Path.PathSeparator;
+                        savePath += "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + "_autosave.xml";
+
+                        List<TaskItemBase> listBase = new List<TaskItemBase>();
+                        foreach (var item in mTaskItemAllCollection)
+                        {
+                            listBase.Add(item.mBase);
+                        }
+                        SerializeList(listBase, savePath);
+                        Console.WriteLine(savePath);
+                    }
+                    else
+                    {
+                        Console.WriteLine("error: Folder does not exist!! " + TaskList.Properties.Settings.Default.AutoSavePath);
+                        mMenuAutoSave.IsChecked = false;
+                    }
+                }
+            }
          }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             btnAlwaysOnTop.IsChecked = TaskList.Properties.Settings.Default.AlwaysOnTop;
             ToggleAlwaysOnTop();
+
+            if (TaskList.Properties.Settings.Default.AutoSavePath.Length != 0 && Directory.Exists(TaskList.Properties.Settings.Default.AutoSavePath))
+            {
+                mMenuAutoSave.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+                mMenuAutoSavePathSelection.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+            }
+            else
+            {
+                TaskList.Properties.Settings.Default.EnableAutoSave = false;
+                TaskList.Properties.Settings.Default.AutoSavePath = "";
+            }
+            mMenuAutoSave.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSave;
+
+            mProgressBarAutoSave.Visibility = (mMenuAutoSave.IsChecked == true && mMenuAutoSaveShowProgress.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
 
             mSBAniOut.Begin(gridControlPanel);
         }
@@ -762,7 +819,9 @@ namespace TaskList
                         break;
 
                 }
-                Console.WriteLine(item.Status.ToString());
+                //Console.WriteLine(item.Status.ToString());
+                Console.WriteLine("mAutoSaveCountdown Button_Click");
+                mAutoSaveCountdown = mAutoSaveCountdownTotal;
 
                 System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
                 view.Refresh();
@@ -939,6 +998,8 @@ namespace TaskList
                 item.Note = textBox.Text;
 
             mResetFocusCountdown = 5000;
+            if (mAutoSaveCountdown!=0)
+                mAutoSaveCountdown = mAutoSaveCountdownTotal;
             mEditingTextBox = textBox;
             UpdateListView();
         }
@@ -984,12 +1045,14 @@ namespace TaskList
                 }
             }
 
+            mAutoSaveCountdown = mAutoSaveCountdownTotal;
+
             UpdateListView();
             UpdateUI();
             
         }
 
-        int mResetFocusCountdown = 0;
+
         private void Grid_MouseEnter(object sender, MouseEventArgs e)
         {
             mResetFocusCountdown = 0;
@@ -1014,12 +1077,14 @@ namespace TaskList
         private TextBox mFocusedTextBox = null;
         private void TextBoxList_GotFocus(object sender, RoutedEventArgs e)
         {
+            mAutoSaveCountdown = mAutoSaveCountdownTotal;
             mFocusedTextBox = sender as TextBox;
             mTimer.Stop();
         }
 
         private void TextBoxList_LostFocus(object sender, RoutedEventArgs e)
         {
+            mAutoSaveCountdown = mAutoSaveCountdownTotal;
             mFocusedTextBox = null;
             UpdateUI();
         }
@@ -1091,6 +1156,7 @@ namespace TaskList
                         UpdateUI();
                         btnFold.IsChecked = false;
                         ToggleFolding();
+                        UpdateListView();
                     }
                     else
                     {
@@ -1103,9 +1169,10 @@ namespace TaskList
             }
             else if (sender == mMenuSave)
             {
+                
                 Microsoft.Win32.SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
                 saveFileDialog.Filter = "Xml file (*.xml)|*.xml|All file (*.*)|*.*";
-                saveFileDialog.FileName = "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + ".xml"; 
+                saveFileDialog.FileName = "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + ".xml";
                 if (saveFileDialog.ShowDialog() == true)
                 {
                     List<TaskItemBase> listBase = new List<TaskItemBase>();
@@ -1116,6 +1183,68 @@ namespace TaskList
                     SerializeList(listBase, saveFileDialog.FileName);
 
                 }
+            }
+            else if (sender == mMenuAutoSave)
+            {
+                Console.WriteLine("mMenuAutoSave " + mMenuAutoSave.IsChecked);
+
+                if (!mMenuAutoSave.IsChecked)
+                {
+                    mAutoSaveCountdown = 0;
+                    mProgressBarAutoSave.Visibility = Visibility.Collapsed;
+                }
+                else if (mMenuAutoSave.IsChecked && 
+                    (TaskList.Properties.Settings.Default.AutoSavePath.Length == 0 || !Directory.Exists(TaskList.Properties.Settings.Default.AutoSavePath)))
+                {
+                    using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+                    {
+                        System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+                        Console.WriteLine("mMenuAutoSave result " + result + "　" + dialog.SelectedPath);
+                        if (result == System.Windows.Forms.DialogResult.OK)
+                        {
+                            string savePath = dialog.SelectedPath;
+                            if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith("" + System.IO.Path.DirectorySeparatorChar))
+                                savePath += System.IO.Path.DirectorySeparatorChar;// System.IO.Path.PathSeparator;
+
+                            TaskList.Properties.Settings.Default.AutoSavePath = savePath;
+
+                            mMenuAutoSave.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+                            mMenuAutoSavePathSelection.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+                        }
+                        else
+                            mMenuAutoSave.IsChecked = false;
+                    }
+                }
+                TaskList.Properties.Settings.Default.EnableAutoSave = mMenuAutoSave.IsChecked == true;
+                TaskList.Properties.Settings.Default.Save();
+
+            }
+            else if (sender == mMenuAutoSavePathSelection)
+            {
+                using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
+                {
+                    dialog.SelectedPath = TaskList.Properties.Settings.Default.AutoSavePath;
+                    System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+                    Console.WriteLine("mMenuAutoSave result " + result + "　" + dialog.SelectedPath);
+                    if (result == System.Windows.Forms.DialogResult.OK)
+                    {
+                        string savePath = dialog.SelectedPath;
+                        if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith("" + System.IO.Path.DirectorySeparatorChar))
+                            savePath += System.IO.Path.DirectorySeparatorChar;// System.IO.Path.PathSeparator;
+                        
+                        Console.WriteLine("mMenuAutoSave path exist? " + Directory.Exists(savePath));
+
+                        TaskList.Properties.Settings.Default.AutoSavePath = savePath;
+                        TaskList.Properties.Settings.Default.Save();
+                        mMenuAutoSave.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+                        mMenuAutoSavePathSelection.ToolTip = "Path: " + TaskList.Properties.Settings.Default.AutoSavePath;
+                    }
+                }
+            }
+            else if (sender == mMenuAutoSaveShowProgress)
+            {
+                TaskList.Properties.Settings.Default.EnableAutoSaveProgressBar = mMenuAutoSaveShowProgress.IsChecked;
+                TaskList.Properties.Settings.Default.Save();
             }
         }
     }

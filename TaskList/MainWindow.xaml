@@ -33,9 +33,15 @@
             </ListView.Resources>
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
-                    <Setter Property="Padding" Value="0"/>
-                    <Setter Property="Margin" Value="0"/>
-                    <Setter Property="BorderThickness" Value="0"/>
+                    <!--<Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>-->
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#33000000"/>
+                    <Style.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="0"/>
+                        </Style>
+                    </Style.Resources>
                 </Style>
             </ListView.ItemContainerStyle>
             <ListView.View>
@@ -62,7 +68,7 @@
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
-                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" FontFamily="Microsoft JhengHei">
+                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" FontFamily="Microsoft JhengHei" AcceptsTab="True">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -88,6 +94,8 @@
                 </GridView>
             </ListView.View>
         </ListView>
+
+        <ProgressBar Height="4" BorderThickness="0" Padding="0" Margin="0" x:Name="mProgressBarAutoSave" VerticalAlignment="Bottom" BorderBrush="{x:Null}" Foreground="#AA06B025" Background="{x:Null}" VerticalContentAlignment="Bottom"/>
         <Label Grid.Column="2" x:Name="mLabelTitle" Grid.ColumnSpan="2" Background="Transparent" Content="Task" HorizontalContentAlignment="Center" VerticalAlignment="Top">
         </Label>
         <Grid x:Name="gridControlPanel" Margin="0" UIElement.PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" UIElement.PreviewMouseMove="OnButtonMove_MouseMove" VerticalAlignment="Top">
@@ -128,16 +136,46 @@
                             </MenuItem.Icon>
                             <MenuItem.Header>
                                 <StackPanel Orientation="Horizontal">
-                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Save</AccessText>
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Save...</AccessText>
                                 </StackPanel>
                             </MenuItem.Header>
                         </MenuItem>
                         <MenuItem x:Name="mMenuLoad" Height="28" Click="MenuItem_Click">
                             <MenuItem.Header>
                                 <StackPanel Orientation="Horizontal">
-                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Load</AccessText>
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Load...</AccessText>
                                 </StackPanel>
                             </MenuItem.Header>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Height="28" >
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Auto Save</AccessText>
+                                </StackPanel>
+                            </MenuItem.Header>
+                            <MenuItem Height="28" x:Name="mMenuAutoSave" StaysOpenOnClick="True" Click="MenuItem_Click" IsCheckable="True">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center" Margin="20,0,0,0">Enable</AccessText>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem Height="28" x:Name="mMenuAutoSavePathSelection" Click="MenuItem_Click">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center" Margin="20,0,0,0">Select Path...</AccessText>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem Height="28" x:Name="mMenuAutoSaveShowProgress" StaysOpenOnClick="True" Click="MenuItem_Click" IsCheckable="True">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center" Margin="20,0,0,0">Show Countdown</AccessText>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+
                         </MenuItem>
                         <Separator />
                         <MenuItem x:Name="mMenuExit" Height="28" Click="MenuItem_Click">
