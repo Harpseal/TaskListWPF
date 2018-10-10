@@ -247,7 +247,6 @@ namespace TaskList
         private Storyboard mSBAniIn;
 
         private System.Windows.Forms.Timer mTimer = new System.Windows.Forms.Timer();
-        private bool mIsFirstTime = true;
 
         public const int MinNoteWidth = 120;
 
@@ -307,7 +306,7 @@ namespace TaskList
             mSBAniIn = new Storyboard();
             DoubleAnimation daFadeIn = new DoubleAnimation();
             daFadeIn.Duration = new Duration(new TimeSpan(0, 0, 0, 0, 200));// 200.Milliseconds();
-            daFadeIn.From = 0.0;
+            //daFadeIn.From = 0.0;
             daFadeIn.To = 1.0;
 
             mSBAniIn.Children.Add(daFadeIn);
@@ -541,12 +540,13 @@ namespace TaskList
             if (mResetFocusCountdown > 0)
             {
                 mResetFocusCountdown -= mTimer.Interval;
-                //Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown);
+                Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown);
                 if (mResetFocusCountdown<=0)
                 {
                     if (mFocusedTextBox != null)
                     {
                         mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                        Keyboard.ClearFocus();
                         mFocusedTextBox = null;
                     }
                     mListView.SelectedItem = null;
@@ -943,16 +943,24 @@ namespace TaskList
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            bool isTpying = (DateTime.Now - mDateTimePreTextChange).TotalSeconds < 1;
+            Console.WriteLine("" + e.PreviousSize.Width + " -> " + e.NewSize.Width + " " + this.IsLoaded + " " + this.IsActive + " isTpying " + isTpying);
+            if (this.IsActive && !isTpying)
+                this.Left += e.PreviousSize.Width - e.NewSize.Width;
         }
 
-        private Size MeasureString(string candidate, TextBox textBox)
+
+        private Size MeasureString(string candidate)
         {
+            if (mNoteTypeFace == null)
+                return new Size(MinNoteWidth, 0);
+
             var formattedText = new FormattedText(
                 candidate,
                 CultureInfo.CurrentCulture,
                 FlowDirection.LeftToRight,
-                new Typeface(textBox.FontFamily, textBox.FontStyle, textBox.FontWeight, textBox.FontStretch),
-                textBox.FontSize,
+                mNoteTypeFace,
+                mNoteFontSize,
                 Brushes.Black,
                 new NumberSubstitution(),
                 TextFormattingMode.Ideal);
@@ -963,16 +971,15 @@ namespace TaskList
         TextBox mEditingTextBox = null;
         private void UpdateListView()
         {
-            if (mEditingTextBox == null)
-                return;
-            double maxWidth = MeasureString(mEditingTextBox.Text, mEditingTextBox).Width;
+            double maxWidth = mEditingTextBox != null ? MeasureString(mEditingTextBox.Text).Width : MinNoteWidth;
 
-            TaskItem item = mEditingTextBox.DataContext as TaskItem;
+            TaskItem item = mEditingTextBox != null ? mEditingTextBox.DataContext as TaskItem : null;
 
-            foreach (var task in mTaskItemAllCollection)
+            //foreach (var task in mTaskItemAllCollection)
+            foreach (TaskItem task in mListView.Items)
             {
                 if (item == task) continue;
-                Size strSize = MeasureString(task.Note, mEditingTextBox);
+                Size strSize = MeasureString(task.Note);
                 if (maxWidth < strSize.Width)
                     maxWidth = strSize.Width;
             }
@@ -986,7 +993,8 @@ namespace TaskList
             }
             //Console.WriteLine("UpdateListView max: " + maxWidth + "  new: " + newWidth  + "[" + mEditingTextBox.Text);
         }
-        
+
+        private DateTime mDateTimePreTextChange = DateTime.Now;
         private void TextBoxList_TextChanged(object sender, TextChangedEventArgs e)
         {
             TextBox textBox = sender as TextBox;
@@ -996,6 +1004,8 @@ namespace TaskList
 
             if (item != null)
                 item.Note = textBox.Text;
+
+            mDateTimePreTextChange = DateTime.Now;
 
             mResetFocusCountdown = 5000;
             if (mAutoSaveCountdown!=0)
@@ -1062,6 +1072,10 @@ namespace TaskList
 
         private void Grid_MouseLeave(object sender, MouseEventArgs e)
         {
+            //Point mousePos = new Point(System.Windows.Forms.Control.MousePosition.X, System.Windows.Forms.Control.MousePosition.Y);
+            //bool isMouseStillInside = mousePos.X >= this.Left && mousePos.X <= this.Left + this.Width && mousePos.Y >= this.Top && mousePos.X <= this.Top + this.Width;
+            //Console.WriteLine("Control.MousePosition " + mousePos + " " + isMouseStillInside);
+
             mSBAniOut.Begin(gridControlPanel);
 
             mResetFocusCountdown = 5000;
@@ -1111,28 +1125,25 @@ namespace TaskList
             {
                 Console.WriteLine("press ESC");
                 e.Handled = true;
-                text.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                Keyboard.ClearFocus();
                 mListView.SelectedItem = null;
             }
         }
 
-        List<TextBox> mTextBoxList = new List<TextBox>();
+        private Typeface mNoteTypeFace = null;
+        private double mNoteFontSize = 12;
         private void TextBoxList_Loaded(object sender, RoutedEventArgs e)
         {
             TextBox text = sender as TextBox;
-            if (mIsFirstTime)
+
+            //Copy the settings of note text box.
+            if (mNoteTypeFace == null && text != null)
             {
-                if (text != null)
-                {
-                    if (mTextBoxList.Count < mTaskItemAllCollection.Count && !mTextBoxList.Contains(text))
-                        mTextBoxList.Add(text);
-                    if (mTextBoxList.Count >= mTaskItemAllCollection.Count)
-                    {
-                        mIsFirstTime = false;
-                        TextBoxList_TextChanged(sender, null);
-                    }
-                }
+                mNoteTypeFace = new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch);
+                mNoteFontSize = text.FontSize;
             }
+            UpdateListView();
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
