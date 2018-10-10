@@ -366,7 +366,7 @@ namespace TaskList
                 }
             };
 
-            UpdateUI();
+            UpdateTitle();
         }
 
         //ref: https://www.codeproject.com/Articles/487571/XML-Serialization-and-Deserialization-Part-2
@@ -453,7 +453,7 @@ namespace TaskList
             return bounds;
         }
 
-        int UpdateUI()
+        int UpdateTitle()
         {
             int nWorking = 0;
             foreach (var item in mTaskItemAllCollection)
@@ -461,7 +461,6 @@ namespace TaskList
                     nWorking++;
             mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemAllCollection.Count + ")";
 
-            RefreshListView();
             if (nWorking == 0 && mAutoSaveCountdown == 0 && mResetFocusCountdown == 0)
                 mTimer.Stop();
             else if (!mTimer.Enabled)
@@ -480,11 +479,14 @@ namespace TaskList
         private double MinTimeWidth = 40;
         private double MidTimeWidth = 45;
         private double MaxTimeWidth = 55;
-        void RefreshListView()
+        void UpdateListViewTimer()
         {
+            if (mListView.Items == null || mListView.Items.Count == 0)
+                return;
             bool isMidTimeWidth = false;
             bool isMaxTimeWidth = false;
-            foreach (var item in mTaskItemAllCollection)
+            //foreach (var item in mTaskItemAllCollection)
+            foreach (TaskItem item in mListView.Items)
             {
 
                 TimeSpan timeDiff = item.TimeTotal;
@@ -535,7 +537,7 @@ namespace TaskList
 
         void Timer_Tick(object sender, EventArgs e)
         {
-            RefreshListView();
+            UpdateListViewTimer();
 
             if (mResetFocusCountdown > 0)
             {
@@ -737,8 +739,32 @@ namespace TaskList
             }
         }
 
+        private void TimerTextBlock_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            TextBlock text = sender as TextBlock;
+            TaskItem item = text != null ? text.DataContext as TaskItem : null;
+            if (item != null)
+            {
+                if (e.RightButton == MouseButtonState.Pressed)
+                {
+                    Console.WriteLine("MiddleButton");
+                    MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
+                                          "Confirmation",
+                                          MessageBoxButton.YesNo,
+                                          MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        item.TimeStart = DateTime.Now;
+                        item.TimeTotal = TimeSpan.Zero;
+                        Timer_Tick(null, null);
+                    }
+                    e.Handled = true;
+                    UpdateListViewTimer();
+                }
+            }
+        }
 
-        private void Button_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        private void StatusButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             Button btn = sender as Button;
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
@@ -746,10 +772,18 @@ namespace TaskList
             {
                 if (e.RightButton == MouseButtonState.Pressed)
                 {
-                    int idx = mTaskItemAllCollection.IndexOf(item);
-                    if (idx>0)
-                        mTaskItemAllCollection.Move(idx, 0);
-                    Console.WriteLine("RightButton " + idx);
+                    if (btnFold.IsChecked == true)
+                    {
+                        int idx = mTaskItemWorkingCollection.IndexOf(item);
+                        if (idx > 0)
+                            mTaskItemWorkingCollection.Move(idx, 0);
+                    }
+                    else
+                    {
+                        int idx = mTaskItemAllCollection.IndexOf(item);
+                        if (idx > 0)
+                            mTaskItemAllCollection.Move(idx, 0);
+                    }
                     e.Handled = true;
                 }
                 else if (e.MiddleButton == MouseButtonState.Pressed)
@@ -770,31 +804,7 @@ namespace TaskList
             }
         }
 
-        private void TextBlock_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            TextBlock text = sender as TextBlock;
-            TaskItem item = text != null ? text.DataContext as TaskItem : null;
-            if (item != null)
-            {
-                if (e.RightButton == MouseButtonState.Pressed)
-                {
-                    Console.WriteLine("MiddleButton");
-                    MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
-                                          "Confirmation",
-                                          MessageBoxButton.YesNo,
-                                          MessageBoxImage.Question);
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        item.TimeStart = DateTime.Now;
-                        item.TimeTotal = TimeSpan.Zero;
-                        Timer_Tick(null, null);
-                    }
-                    e.Handled = true;
-                }
-            }
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void StatusButton_Click(object sender, RoutedEventArgs e)
         {
             Button btn = sender as Button;
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
@@ -828,11 +838,11 @@ namespace TaskList
                 if (mMenuAutoSaveSkipStatusChanges.IsChecked == false)
                     mAutoSaveCountdown = mAutoSaveCountdownTotal;
 
-                System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
-                view.Refresh();
+                //System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
+                //view.Refresh();
 
-                Timer_Tick(null, null);
-                UpdateUI();
+                UpdateTitle();
+                UpdateListViewTimer();
             }
         }
 
@@ -858,6 +868,7 @@ namespace TaskList
         private void btnFold_Click(object sender, RoutedEventArgs e)
         {
             ToggleFolding();
+            UpdateListViewTimer();
         }
 
         private void ToggleFolding()
@@ -974,7 +985,7 @@ namespace TaskList
         }
 
         TextBox mEditingTextBox = null;
-        private void UpdateListView()
+        private void UpdateListViewTaskNote()
         {
             double maxWidth = mEditingTextBox != null ? MeasureString(mEditingTextBox.Text).Width : MinNoteWidth;
 
@@ -1016,7 +1027,7 @@ namespace TaskList
             if (mAutoSaveCountdown!=0)
                 mAutoSaveCountdown = mAutoSaveCountdownTotal;
             mEditingTextBox = textBox;
-            UpdateListView();
+            UpdateListViewTaskNote();
         }
 
         private void lstView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1062,8 +1073,9 @@ namespace TaskList
 
             mAutoSaveCountdown = mAutoSaveCountdownTotal;
 
-            UpdateListView();
-            UpdateUI();
+            UpdateListViewTaskNote();
+            UpdateTitle();
+            UpdateListViewTimer();
             
         }
 
@@ -1071,7 +1083,7 @@ namespace TaskList
         private void Grid_MouseEnter(object sender, MouseEventArgs e)
         {
             mResetFocusCountdown = 0;
-            UpdateUI();
+            UpdateTitle();
             mSBAniIn.Begin(gridControlPanel);
         }
 
@@ -1115,7 +1127,6 @@ namespace TaskList
                 //Console.WriteLine(mFocusedText + " -> " + mFocusedTextBox.Text + "  " + mAutoSaveCountdown);
             }
             mFocusedTextBox = null;
-            UpdateUI();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1158,7 +1169,7 @@ namespace TaskList
                 mNoteTypeFace = new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch);
                 mNoteFontSize = text.FontSize;
             }
-            UpdateListView();
+            UpdateListViewTaskNote();
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
@@ -1179,10 +1190,10 @@ namespace TaskList
                         {
                             mTaskItemAllCollection.Add(new TaskItem(item));
                         }
-                        UpdateUI();
+                        UpdateTitle();
                         btnFold.IsChecked = false;
                         ToggleFolding();
-                        UpdateListView();
+                        UpdateListViewTaskNote();
                     }
                     else
                     {

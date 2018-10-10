@@ -50,7 +50,7 @@
                         <GridViewColumn Header="Ctr." Width="28" >
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Click="Button_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="Button_PreviewMouseDown" ToolTip="R: Top, M: Reset timer">
+                                    <Button Click="StatusButton_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Reset timer">
                                         <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
                                     </Button>
                                 </DataTemplate>
@@ -60,7 +60,7 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
 
-                                    <TextBlock  Text="{Binding TimeStr}" Margin="-8,1,-8,0" FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TextBlock_MouseDown" MinWidth="{Binding Width, ElementName=TimerHeader}"  TextAlignment="Right"  HorizontalAlignment="Right"/>
+                                    <TextBlock  Text="{Binding TimeStr}" Margin="-8,1,-8,0" FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TimerTextBlock_MouseDown" MinWidth="{Binding Width, ElementName=TimerHeader}"  TextAlignment="Right"  HorizontalAlignment="Right"/>
 
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -109,7 +109,7 @@
                     <ColumnDefinition Width="24"/>
                     <ColumnDefinition Width="24"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="2" Grid.ColumnSpan="2" x:Name="btnMove" Visibility="Visible" Background="White" Foreground="Black" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="auto" Click="btnTask_Click" Height="24" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="btnMove_PreviewMouseMove" VerticalContentAlignment="Stretch" Opacity="0.1" BorderBrush="Transparent">
+                <Button Grid.Column="2" Grid.ColumnSpan="3" x:Name="btnMove" Visibility="Visible" Background="White" Foreground="Black" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="auto" Click="btnTask_Click" Height="24" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="btnMove_PreviewMouseMove" VerticalContentAlignment="Stretch" Opacity="0.1" BorderBrush="Transparent">
 
                     <Button.ContextMenu>
                         <ContextMenu>
