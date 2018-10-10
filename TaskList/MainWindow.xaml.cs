@@ -604,6 +604,10 @@ namespace TaskList
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             btnAlwaysOnTop.IsChecked = TaskList.Properties.Settings.Default.AlwaysOnTop;
+
+            mMenuAutoSaveSkipStatusChanges.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSaveSkipStatusChanges;
+            mMenuAutoSaveShowProgress.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSaveProgressBar;
+
             ToggleAlwaysOnTop();
 
             if (TaskList.Properties.Settings.Default.AutoSavePath.Length != 0 && Directory.Exists(TaskList.Properties.Settings.Default.AutoSavePath))
@@ -821,7 +825,8 @@ namespace TaskList
                 }
                 //Console.WriteLine(item.Status.ToString());
                 Console.WriteLine("mAutoSaveCountdown Button_Click");
-                mAutoSaveCountdown = mAutoSaveCountdownTotal;
+                if (mMenuAutoSaveSkipStatusChanges.IsChecked == false)
+                    mAutoSaveCountdown = mAutoSaveCountdownTotal;
 
                 System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
                 view.Refresh();
@@ -1088,17 +1093,27 @@ namespace TaskList
             //Console.WriteLine("Grid_MouseDown");
         }
 
+        private string mFocusedText = "";
         private TextBox mFocusedTextBox = null;
         private void TextBoxList_GotFocus(object sender, RoutedEventArgs e)
         {
             mAutoSaveCountdown = mAutoSaveCountdownTotal;
             mFocusedTextBox = sender as TextBox;
+            if (mFocusedTextBox != null)
+                mFocusedText = mFocusedTextBox.Text;
             mTimer.Stop();
         }
 
         private void TextBoxList_LostFocus(object sender, RoutedEventArgs e)
         {
-            mAutoSaveCountdown = mAutoSaveCountdownTotal;
+            if (mFocusedTextBox != null)
+            {
+                if (mFocusedText == mFocusedTextBox.Text)
+                    mAutoSaveCountdown = 0; //no changes, skip autosave....
+                else
+                    mAutoSaveCountdown = mAutoSaveCountdownTotal;
+                //Console.WriteLine(mFocusedText + " -> " + mFocusedTextBox.Text + "  " + mAutoSaveCountdown);
+            }
             mFocusedTextBox = null;
             UpdateUI();
         }
@@ -1255,6 +1270,11 @@ namespace TaskList
             else if (sender == mMenuAutoSaveShowProgress)
             {
                 TaskList.Properties.Settings.Default.EnableAutoSaveProgressBar = mMenuAutoSaveShowProgress.IsChecked;
+                TaskList.Properties.Settings.Default.Save();
+            }
+            else if (sender == mMenuAutoSaveSkipStatusChanges)
+            {
+                TaskList.Properties.Settings.Default.EnableAutoSaveSkipStatusChanges = mMenuAutoSaveSkipStatusChanges.IsChecked;
                 TaskList.Properties.Settings.Default.Save();
             }
         }

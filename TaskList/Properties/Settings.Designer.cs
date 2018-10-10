@@ -106,5 +106,17 @@ namespace TaskList.Properties {
                 this["EnableAutoSaveProgressBar"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableAutoSaveSkipStatusChanges {
+            get {
+                return ((bool)(this["EnableAutoSaveSkipStatusChanges"]));
+            }
+            set {
+                this["EnableAutoSaveSkipStatusChanges"] = value;
+            }
+        }
     }
 }

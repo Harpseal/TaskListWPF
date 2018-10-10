@@ -158,6 +158,13 @@
                                         </StackPanel>
                                     </MenuItem.Header>
                                 </MenuItem>
+                                <MenuItem Height="28" x:Name="mMenuAutoSaveSkipStatusChanges" StaysOpenOnClick="True" Click="MenuItem_Click" IsCheckable="True" IsChecked="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center" Margin="20,0,0,0">Skip Status Changes</AccessText>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
 
                             </MenuItem>
                             <Separator />
