@@ -34,6 +34,7 @@
                 </ListView.Resources>
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
+                        <EventSetter Event="PreviewMouseDown" Handler="ListViewItem_PreviewMouseDown"/>
                         <!--<Setter Property="Padding" Value="0"/>
                     <Setter Property="Margin" Value="0"/>-->
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
@@ -43,6 +44,7 @@
                                 <Setter Property="CornerRadius" Value="0"/>
                             </Style>
                         </Style.Resources>
+                        
                     </Style>
                 </ListView.ItemContainerStyle>
                 <ListView.View>
@@ -50,7 +52,7 @@
                         <GridViewColumn Header="Ctr." Width="28" >
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Click="StatusButton_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Reset timer">
+                                    <Button Click="StatusButton_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Hide">
                                         <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
                                     </Button>
                                 </DataTemplate>

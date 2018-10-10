@@ -476,9 +476,9 @@ namespace TaskList
             return nWorking;
         }
 
-        private double MinTimeWidth = 40;
-        private double MidTimeWidth = 45;
-        private double MaxTimeWidth = 55;
+        private const double MinTimeWidth = 40;
+        private const double MidTimeWidth = 45;
+        private const double MaxTimeWidth = 55;
         void UpdateListViewTimer()
         {
             if (mListView.Items == null || mListView.Items.Count == 0)
@@ -745,9 +745,9 @@ namespace TaskList
             TaskItem item = text != null ? text.DataContext as TaskItem : null;
             if (item != null)
             {
+                mDateTimePreTextChange = DateTime.Now;
                 if (e.RightButton == MouseButtonState.Pressed)
                 {
-                    Console.WriteLine("MiddleButton");
                     MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
                                           "Confirmation",
                                           MessageBoxButton.YesNo,
@@ -759,9 +759,88 @@ namespace TaskList
                         Timer_Tick(null, null);
                     }
                     e.Handled = true;
-                    UpdateListViewTimer();
                 }
+                else if (e.MiddleButton == MouseButtonState.Pressed)
+                {
+                    //Hide the clicked task.
+                    if (btnFold.IsChecked == true)
+                    {
+                        if (mTaskItemWorkingCollection.Contains(item))
+                            mTaskItemWorkingCollection.Remove(item);
+                    }
+                    else
+                    {
+                        mTaskItemWorkingCollection.Clear();
+                        foreach (var i in mTaskItemAllCollection)
+                            if (i != item)
+                                mTaskItemWorkingCollection.Add(i);
+                        mListView.ItemsSource = mTaskItemWorkingCollection;
+                        btnFold.IsChecked = true;
+
+                        imgUnfold.Visibility = btnFold.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+                        imgFold.Visibility = btnFold.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
+                    }
+                    e.Handled = true;
+                    UpdateListViewTaskNote();
+                }
+                UpdateListViewTimer();
             }
+        }
+
+        private void TaskItemMouseDown(TaskItem item, MouseButtonEventArgs e)
+        {
+            if (item == null) return;
+            if (e.RightButton == MouseButtonState.Pressed)
+            {
+                //Move the clicked task to the first position.
+                if (btnFold.IsChecked == true)
+                {
+                    int idx = mTaskItemWorkingCollection.IndexOf(item);
+                    if (idx > 0)
+                        mTaskItemWorkingCollection.Move(idx, 0);
+                }
+                else
+                {
+                    int idx = mTaskItemAllCollection.IndexOf(item);
+                    if (idx > 0)
+                        mTaskItemAllCollection.Move(idx, 0);
+                }
+                e.Handled = true;
+            }
+            else if (e.MiddleButton == MouseButtonState.Pressed)
+            {
+                //Hide the clicked task.
+                if (btnFold.IsChecked == true)
+                {
+                    if (mTaskItemWorkingCollection.Contains(item))
+                        mTaskItemWorkingCollection.Remove(item);
+                }
+                else
+                {
+                    mTaskItemWorkingCollection.Clear();
+                    foreach (var i in mTaskItemAllCollection)
+                        if (i != item)
+                            mTaskItemWorkingCollection.Add(i);
+                    mListView.ItemsSource = mTaskItemWorkingCollection;
+                    btnFold.IsChecked = true;
+
+                    imgUnfold.Visibility = btnFold.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+                    imgFold.Visibility = btnFold.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
+                }
+                e.Handled = true;
+                mDateTimePreTextChange = DateTime.Now;
+                UpdateListViewTimer();
+                UpdateListViewTaskNote();
+            }
+        }
+
+        private void ListViewItem_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            ListViewItem litem = sender as ListViewItem;
+            TaskItem item = litem != null ? litem.DataContext as TaskItem : null;
+
+            if (item != null)
+                TaskItemMouseDown(item, e);
         }
 
         private void StatusButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
@@ -769,40 +848,9 @@ namespace TaskList
             Button btn = sender as Button;
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
             if (item != null)
-            {
-                if (e.RightButton == MouseButtonState.Pressed)
-                {
-                    if (btnFold.IsChecked == true)
-                    {
-                        int idx = mTaskItemWorkingCollection.IndexOf(item);
-                        if (idx > 0)
-                            mTaskItemWorkingCollection.Move(idx, 0);
-                    }
-                    else
-                    {
-                        int idx = mTaskItemAllCollection.IndexOf(item);
-                        if (idx > 0)
-                            mTaskItemAllCollection.Move(idx, 0);
-                    }
-                    e.Handled = true;
-                }
-                else if (e.MiddleButton == MouseButtonState.Pressed)
-                {
-                    Console.WriteLine("MiddleButton");
-                    MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
-                                          "Confirmation",
-                                          MessageBoxButton.YesNo,
-                                          MessageBoxImage.Question);
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        item.TimeStart = DateTime.Now;
-                        item.TimeTotal = TimeSpan.Zero;
-                        Timer_Tick(null, null);
-                    }
-                    e.Handled = true;
-                }
-            }
+                TaskItemMouseDown(item, e);
         }
+
 
         private void StatusButton_Click(object sender, RoutedEventArgs e)
         {
