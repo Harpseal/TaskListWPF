@@ -136,7 +136,7 @@
                 <Button Grid.Column="2" Grid.ColumnSpan="3" x:Name="btnMove" Visibility="Visible" Background="White" Foreground="Black" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="auto" Click="btnTask_Click" Height="24" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="btnMove_PreviewMouseMove" VerticalContentAlignment="Stretch" Opacity="0.1" BorderBrush="Transparent">
 
                     <Button.ContextMenu>
-                        <ContextMenu>
+                        <ContextMenu x:Name="mMainContextMenu">
                             <MenuItem x:Name="mMenuSave" Height="28" Click="MenuItem_Click">
                                 <MenuItem.Icon>
                                     <Image Source="Resource/Icons/baseline_save_black_36dp.png" Width="20" Height="20" />
@@ -190,6 +190,24 @@
                                     </MenuItem.Header>
                                 </MenuItem>
 
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Height="28" >
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Bold Regex</AccessText>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                                <MenuItem Height="28" StaysOpenOnClick="True" Click="MenuItem_Click" IsChecked="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBox MinWidth="120" x:Name="mTextBoxRegexInput" LostFocus="RegexInputTextBox_LostFocus" VerticalContentAlignment="Center" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False">
+                                                
+                                            </TextBox>
+                                            <Button Width="32" Content="Reset" Click="RegexInputTextBox_LostFocus"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
                             </MenuItem>
                             <Separator />
                             <MenuItem x:Name="mMenuExit" Height="28" Click="MenuItem_Click">

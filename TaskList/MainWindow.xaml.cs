@@ -624,6 +624,8 @@ namespace TaskList
             mMenuAutoSaveSkipStatusChanges.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSaveSkipStatusChanges;
             mMenuAutoSaveShowProgress.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSaveProgressBar;
 
+            mTextBoxRegexInput.Text = TaskList.Properties.Settings.Default.RegexBold;
+
             ToggleAlwaysOnTop();
 
             if (TaskList.Properties.Settings.Default.AutoSavePath.Length != 0 && Directory.Exists(TaskList.Properties.Settings.Default.AutoSavePath))
@@ -701,7 +703,11 @@ namespace TaskList
 
         private void lstView_MouseMove(object sender, MouseEventArgs e)
         {
-            // Get the current mouse position
+            //Console.WriteLine("lstView_MouseMove " + btnMove.ContextMenu.IsOpen + " " + mMainContextMenu.IsVisible + " " + mMainContextMenu.Visibility);
+            if (mMainContextMenu.IsVisible == true) return;
+            if (mFocusedRichTextBox != null || mFocusedTextBox != null)
+                return;
+                // Get the current mouse position
             Point mousePos = e.GetPosition(null);
             Vector diff = mStartPoint - mousePos;
 
@@ -719,7 +725,14 @@ namespace TaskList
                                                             // Initialize the drag & drop operation
                 mStartIndex = mListView.SelectedIndex;
                 DataObject dragData = new DataObject("TaskItem", item);
-                DragDrop.DoDragDrop(listViewItem, dragData, DragDropEffects.Copy | DragDropEffects.Move);
+                try
+                {
+                    DragDrop.DoDragDrop(listViewItem, dragData, DragDropEffects.Copy | DragDropEffects.Move);
+                }
+                catch (System.InvalidOperationException ioe)
+                {
+                    Console.WriteLine(ioe);
+                }
             }
         }
 
@@ -1200,7 +1213,7 @@ namespace TaskList
             bool isUpdated = false;
             if (isBold)
             {
-                MatchCollection matches = Regex.Matches(text, "\\[[^\\n\\r]*?\\]");
+                MatchCollection matches = Regex.Matches(text, mTextBoxRegexInput.Text);
                 if (matches.Count > 0)// && mNoteTypeFace != null
                 {
                     isUpdated = true;
@@ -1483,6 +1496,19 @@ namespace TaskList
                 TaskList.Properties.Settings.Default.EnableAutoSaveSkipStatusChanges = mMenuAutoSaveSkipStatusChanges.IsChecked;
                 TaskList.Properties.Settings.Default.Save();
             }
+        }
+
+
+        private void RegexInputTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine("RegexInputTextBox_LostFocus");
+            
+            if (sender != mTextBoxRegexInput)
+            {
+                mTextBoxRegexInput.Text = "(\\[[^\\n\\r]*?\\]|\\s{1}\\d\\.|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})";
+            }
+            TaskList.Properties.Settings.Default.RegexBold = mTextBoxRegexInput.Text;
+            TaskList.Properties.Settings.Default.Save();
         }
 
     }

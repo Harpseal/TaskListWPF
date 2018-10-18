@@ -118,5 +118,17 @@ namespace TaskList.Properties {
                 this["EnableAutoSaveSkipStatusChanges"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("(\\[[^\\n\\r]*?\\]|\\s{1}\\d\\.|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})")]
+        public string RegexBold {
+            get {
+                return ((string)(this["RegexBold"]));
+            }
+            set {
+                this["RegexBold"] = value;
+            }
+        }
     }
 }
