@@ -21,6 +21,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.Threading;
+using System.Text.RegularExpressions;
 
 namespace TaskList
 {
@@ -363,10 +364,16 @@ namespace TaskList
                     this.Show();
                     this.WindowState = WindowState.Normal;
                     this.Activate();
+                    if (btnAlwaysOnTop.IsChecked == true)
+                        this.Topmost = true;
+
                 }
             };
 
             UpdateTitle();
+
+            mNoteTypeFace = new Typeface(new FontFamily("Microsoft JhengHei"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            mNoteFontSize = 13;
         }
 
         //ref: https://www.codeproject.com/Articles/487571/XML-Serialization-and-Deserialization-Part-2
@@ -551,6 +558,13 @@ namespace TaskList
                         Keyboard.ClearFocus();
                         mFocusedTextBox = null;
                     }
+
+                    if (mFocusedRichTextBox != null)
+                    {
+                        mFocusedRichTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                        Keyboard.ClearFocus();
+                        mFocusedRichTextBox = null;
+                    }
                     mListView.SelectedItem = null;
                 }
             }
@@ -671,7 +685,14 @@ namespace TaskList
                 {
                     return (T)current;
                 }
-                current = VisualTreeHelper.GetParent(current);
+                try
+                {
+                    current = VisualTreeHelper.GetParent(current);
+                }catch (System.InvalidOperationException ioe)
+                {
+                    Console.WriteLine(ioe.ToString());
+                    current = null;
+                }
             }
             while (current != null);
             return null;
@@ -739,14 +760,15 @@ namespace TaskList
             }
         }
 
-        private void TimerTextBlock_MouseDown(object sender, MouseButtonEventArgs e)
+
+        private void TimerTextBlock_MouseUp(object sender, MouseButtonEventArgs e)
         {
             TextBlock text = sender as TextBlock;
             TaskItem item = text != null ? text.DataContext as TaskItem : null;
             if (item != null)
             {
                 mDateTimePreTextChange = DateTime.Now;
-                if (e.RightButton == MouseButtonState.Pressed)
+                if (e.LeftButton == MouseButtonState.Released)
                 {
                     MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
                                           "Confirmation",
@@ -760,29 +782,29 @@ namespace TaskList
                     }
                     e.Handled = true;
                 }
-                else if (e.MiddleButton == MouseButtonState.Pressed)
-                {
-                    //Hide the clicked task.
-                    if (btnFold.IsChecked == true)
-                    {
-                        if (mTaskItemWorkingCollection.Contains(item))
-                            mTaskItemWorkingCollection.Remove(item);
-                    }
-                    else
-                    {
-                        mTaskItemWorkingCollection.Clear();
-                        foreach (var i in mTaskItemAllCollection)
-                            if (i != item)
-                                mTaskItemWorkingCollection.Add(i);
-                        mListView.ItemsSource = mTaskItemWorkingCollection;
-                        btnFold.IsChecked = true;
+                //else if (e.MiddleButton == MouseButtonState.Pressed)
+                //{
+                //    //Hide the clicked task.
+                //    if (btnFold.IsChecked == true)
+                //    {
+                //        if (mTaskItemWorkingCollection.Contains(item))
+                //            mTaskItemWorkingCollection.Remove(item);
+                //    }
+                //    else
+                //    {
+                //        mTaskItemWorkingCollection.Clear();
+                //        foreach (var i in mTaskItemAllCollection)
+                //            if (i != item)
+                //                mTaskItemWorkingCollection.Add(i);
+                //        mListView.ItemsSource = mTaskItemWorkingCollection;
+                //        btnFold.IsChecked = true;
 
-                        imgUnfold.Visibility = btnFold.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
-                        imgFold.Visibility = btnFold.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
-                    }
-                    e.Handled = true;
-                    UpdateListViewTaskNote();
-                }
+                //        imgUnfold.Visibility = btnFold.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
+                //        imgFold.Visibility = btnFold.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
+                //    }
+                //    e.Handled = true;
+                //    UpdateListViewTaskNote();
+                //}
                 UpdateListViewTimer();
             }
         }
@@ -1032,17 +1054,13 @@ namespace TaskList
             return new Size(formattedText.Width, formattedText.Height);
         }
 
-        TextBox mEditingTextBox = null;
         private void UpdateListViewTaskNote()
         {
-            double maxWidth = mEditingTextBox != null ? MeasureString(mEditingTextBox.Text).Width : MinNoteWidth;
-
-            TaskItem item = mEditingTextBox != null ? mEditingTextBox.DataContext as TaskItem : null;
+            double maxWidth = MinNoteWidth;
 
             //foreach (var task in mTaskItemAllCollection)
             foreach (TaskItem task in mListView.Items)
             {
-                if (item == task) continue;
                 Size strSize = MeasureString(task.Note);
                 if (maxWidth < strSize.Width)
                     maxWidth = strSize.Width;
@@ -1061,21 +1079,33 @@ namespace TaskList
         private DateTime mDateTimePreTextChange = DateTime.Now;
         private void TextBoxList_TextChanged(object sender, TextChangedEventArgs e)
         {
+            RichTextBox rtBox = sender as RichTextBox;
+            if (rtBox != null)
+            {
+                TaskItem item = rtBox != null ? rtBox.DataContext as TaskItem : null;
+
+                string richText = new TextRange(rtBox.Document.ContentStart, rtBox.Document.ContentEnd).Text.TrimEnd(Environment.NewLine.ToCharArray());
+                item.Note = richText;
+            }
+
             TextBox textBox = sender as TextBox;
-            if (textBox == null) return;
+            if (textBox != null)
+            {
 
-            TaskItem item = textBox != null ? textBox.DataContext as TaskItem : null;
+                TaskItem item = textBox != null ? textBox.DataContext as TaskItem : null;
 
-            if (item != null)
-                item.Note = textBox.Text;
+                if (item != null)
+                    item.Note = textBox.Text;
 
+
+            }
             mDateTimePreTextChange = DateTime.Now;
 
             mResetFocusCountdown = 5000;
-            if (mAutoSaveCountdown!=0)
+            if (mAutoSaveCountdown != 0)
                 mAutoSaveCountdown = mAutoSaveCountdownTotal;
-            mEditingTextBox = textBox;
             UpdateListViewTaskNote();
+
         }
 
         private void lstView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1093,15 +1123,21 @@ namespace TaskList
             if (btn == null) return;
             if (btn == btnAdd)
             {
-                mTaskItemAllCollection.Insert(0, new TaskItem(TaskStatus.IDLE, "Task " + mTaskItemAllCollection.Count));
+                TaskItem itemNew = new TaskItem(TaskStatus.IDLE, "Task " + mTaskItemAllCollection.Count);
+                mTaskItemAllCollection.Insert(0, itemNew);
+                if (mTaskItemWorkingCollection != null)
+                    mTaskItemWorkingCollection.Insert(0, itemNew);
             }
             if (btn == btnRemove)
             {
                 int selectedIdx = mListView.SelectedIndex;
                 if (mListView.SelectedItem != null)
                 {
-                    mTaskItemUndoList.Add((TaskItem)mListView.SelectedItem);
-                    mTaskItemAllCollection.Remove((TaskItem)mListView.SelectedItem);
+                    TaskItem item = (TaskItem)mListView.SelectedItem;
+                    mTaskItemUndoList.Add(item);
+                    mTaskItemAllCollection.Remove(item);
+                    if (mTaskItemWorkingCollection != null && mTaskItemWorkingCollection.Contains(item))
+                        mTaskItemWorkingCollection.Remove(item);
                 }
                 if (selectedIdx >= mListView.Items.Count) selectedIdx = mListView.Items.Count - 1;
                 if (selectedIdx >= 0)
@@ -1115,6 +1151,8 @@ namespace TaskList
                 {
                     TaskItem item = mTaskItemUndoList[mTaskItemUndoList.Count - 1];
                     mTaskItemAllCollection.Add(item);
+                    if (mTaskItemWorkingCollection != null)
+                        mTaskItemWorkingCollection.Add(item);
                     mTaskItemUndoList.Remove(item);
                 }
             }
@@ -1153,14 +1191,66 @@ namespace TaskList
             //Console.WriteLine("Grid_MouseDown");
         }
 
+
+        private void UpdateRichTextBox(RichTextBox rtbox, string text, bool isBold)
+        {
+            if (rtbox == null) return;
+            text = text.TrimEnd(Environment.NewLine.ToCharArray());
+
+            bool isUpdated = false;
+            if (isBold)
+            {
+                MatchCollection matches = Regex.Matches(text, "\\[[^\\n\\r]*?\\]");
+                if (matches.Count > 0)// && mNoteTypeFace != null
+                {
+                    isUpdated = true;
+                    Paragraph para = new Paragraph();
+                    int pos = 0;
+
+                    foreach (Match m in matches)
+                    {
+                        if (pos < m.Index)
+                            para.Inlines.Add(new Run(text.Substring(pos, m.Index - pos)));
+                        para.Inlines.Add(new Bold(new Run(text.Substring(m.Index, m.Length))));
+                        pos = m.Index + m.Length;
+                    }
+
+                    if (pos + 1 < text.Length)
+                        para.Inlines.Add(new Run(text.Substring(pos, text.Length - 1 - pos)));
+                    rtbox.Document.Blocks.Clear();
+                    rtbox.Document.Blocks.Add(para);
+                }
+            }
+
+            if (!isUpdated)
+            {
+                rtbox.Document.Blocks.Clear();
+                rtbox.Document.Blocks.Add(new Paragraph(new Run(text)));
+            }
+        }
+
         private string mFocusedText = "";
         private TextBox mFocusedTextBox = null;
+        private RichTextBox mFocusedRichTextBox = null;
         private void TextBoxList_GotFocus(object sender, RoutedEventArgs e)
         {
             mAutoSaveCountdown = mAutoSaveCountdownTotal;
+
+            mFocusedText = "";
+
             mFocusedTextBox = sender as TextBox;
             if (mFocusedTextBox != null)
                 mFocusedText = mFocusedTextBox.Text;
+            mFocusedRichTextBox = sender as RichTextBox;
+            TaskItem item = mFocusedRichTextBox != null ? mFocusedRichTextBox.DataContext as TaskItem : null;
+            if (mFocusedRichTextBox != null && item != null)
+            {
+                //mFocusedRichTextBox.Document.Blocks.Clear();
+                //mFocusedRichTextBox.Document.Blocks.Add(new Paragraph(new Run(item.Note)));
+                UpdateRichTextBox(mFocusedRichTextBox, item.Note, false);
+                mFocusedText = item.Note;
+            }
+
             mTimer.Stop();
         }
 
@@ -1174,15 +1264,49 @@ namespace TaskList
                     mAutoSaveCountdown = mAutoSaveCountdownTotal;
                 //Console.WriteLine(mFocusedText + " -> " + mFocusedTextBox.Text + "  " + mAutoSaveCountdown);
             }
+            if (mFocusedRichTextBox != null)
+            {
+                TaskItem item = mFocusedRichTextBox != null ? mFocusedRichTextBox.DataContext as TaskItem : null;
+                if (item != null)
+                {
+                    string richText = new TextRange(mFocusedRichTextBox.Document.ContentStart, mFocusedRichTextBox.Document.ContentEnd).Text.TrimEnd(Environment.NewLine.ToCharArray());
+                    item.Note = richText;
+                    UpdateRichTextBox(mFocusedRichTextBox, item.Note, true);
+
+                    //MatchCollection matches = Regex.Matches(richText, "\\[[^\\n\\r]*?\\]");
+                    //if (matches.Count > 0 && mNoteTypeFace != null)
+                    //{
+                    //    Paragraph para = new Paragraph();
+                    //    int pos = 0;
+
+                    //    foreach (Match m in matches)
+                    //    {
+                    //        if (pos < m.Index)
+                    //            para.Inlines.Add(new Run(richText.Substring(pos, m.Index - pos)));
+                    //        para.Inlines.Add(new Bold(new Run(richText.Substring(m.Index, m.Length))));
+                    //        pos = m.Index + m.Length;
+                    //    }
+
+                    //    if (pos + 1 < richText.Length)
+                    //        para.Inlines.Add(new Run(richText.Substring(pos, richText.Length-1 - pos)));
+                    //    mFocusedRichTextBox.Document.Blocks.Clear();
+                    //    mFocusedRichTextBox.Document.Blocks.Add(para);
+                    //}
+                }
+                
+            }
             mFocusedTextBox = null;
+            mFocusedRichTextBox = null;
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (mFocusedTextBox!=null)
                 mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-            foreach (var item in mTaskItemAllCollection)
-                Console.WriteLine(item.Note);
+            if (mFocusedRichTextBox != null)
+                mFocusedRichTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+            //foreach (var item in mTaskItemAllCollection)
+            //    Console.WriteLine(item.Note);
             SaveTaskList();
 
             if (mNotifyIcon != null)
@@ -1194,12 +1318,15 @@ namespace TaskList
 
         private void TextBoxList_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            TextBox text = sender as TextBox;
-            if (text != null && e.Key == Key.Escape)
+            Console.WriteLine("TextBoxList_PreviewKeyDown");
+            if (e.Key == Key.Escape)
             {
                 Console.WriteLine("press ESC");
                 e.Handled = true;
-                mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                if (mFocusedTextBox != null)
+                    mFocusedTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                if (mFocusedRichTextBox != null)
+                    mFocusedRichTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
                 Keyboard.ClearFocus();
                 mListView.SelectedItem = null;
             }
@@ -1211,11 +1338,31 @@ namespace TaskList
         {
             TextBox text = sender as TextBox;
 
-            //Copy the settings of note text box.
-            if (mNoteTypeFace == null && text != null)
+            if (text != null)
             {
-                mNoteTypeFace = new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch);
-                mNoteFontSize = text.FontSize;
+                //Copy the settings of note text box.
+                if (mNoteTypeFace == null)
+                {
+                    mNoteTypeFace = new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch);
+                    mNoteFontSize = text.FontSize;
+                }
+                else
+                {
+                    text.FontFamily = mNoteTypeFace.FontFamily;
+                    text.FontStyle = mNoteTypeFace.Style;
+                    text.FontWeight = mNoteTypeFace.Weight;
+                    text.FontStretch = mNoteTypeFace.Stretch;
+                    text.FontSize = mNoteFontSize;
+                }
+            }
+
+            RichTextBox rtBox = sender as RichTextBox;
+            TaskItem item = rtBox != null ? rtBox.DataContext as TaskItem : null;
+            if (rtBox != null && item != null)
+            {
+                UpdateRichTextBox(rtBox, item.Note, true);
+                //rtBox.Document.Blocks.Clear();
+                //rtBox.Document.Blocks.Add(new Paragraph(new Run(item.Note)));
             }
             UpdateListViewTaskNote();
         }
@@ -1337,5 +1484,6 @@ namespace TaskList
                 TaskList.Properties.Settings.Default.Save();
             }
         }
+
     }
 }

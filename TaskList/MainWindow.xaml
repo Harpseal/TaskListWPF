@@ -62,7 +62,7 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
 
-                                    <TextBlock  Text="{Binding TimeStr}" Margin="-8,1,-8,0" FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MouseDown="TimerTextBlock_MouseDown" MinWidth="{Binding Width, ElementName=TimerHeader}"  TextAlignment="Right"  HorizontalAlignment="Right"/>
+                                    <TextBlock  Text="{Binding TimeStr}" Margin="-8,1,-8,0" FontWeight="{Binding FontWeight}" Foreground="{Binding FontColor}" FontFamily="Consolas" MinWidth="{Binding Width, ElementName=TimerHeader}"  TextAlignment="Right"  HorizontalAlignment="Right" MouseLeftButtonUp="TimerTextBlock_MouseUp" ToolTip="R:Top, M:Hide, L:Reset"/>
 
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -70,7 +70,29 @@
                         <GridViewColumn Header="Note" Width="100" x:Name="mGridColumnNote">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
+                                    <RichTextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
+                                         GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" AcceptsTab="True" BorderBrush="Transparent">
+                                        <!--RichTextBox.Style>
+                                            <Style TargetType="TextBox">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                        <Setter Property="IsReadOnly" Value="False" />
+                                                        <Setter Property="BorderBrush" Value="LightGray"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="False">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                        <Setter Property="IsReadOnly" Value="True" />
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                        <Setter Property="BorderBrush" Value="#01FFFFFF"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </RichTextBox.Style-->
+                                    </RichTextBox>
+                                    
+                                    <!--TextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" Text="{Binding Note}" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
                                          GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" FontFamily="Microsoft JhengHei" AcceptsTab="True">
                                         <TextBox.Style>
                                             <Style TargetType="TextBox">
@@ -90,7 +112,7 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </TextBox.Style>
-                                    </TextBox>
+                                    </TextBox-->
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
