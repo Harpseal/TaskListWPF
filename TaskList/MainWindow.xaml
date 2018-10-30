@@ -14,9 +14,9 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <Border Background="White" BorderBrush="Transparent" BorderThickness="1,1,1,1" CornerRadius="4,4,4,4" Margin="10">
+    <Border Background="White" BorderBrush="Transparent" BorderThickness="1,1,1,1" CornerRadius="4,4,4,4" Margin="6">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="15" Direction="-90" RenderingBias="Quality" ShadowDepth="2"/>
+            <DropShadowEffect BlurRadius="5" Direction="-90" RenderingBias="Quality" ShadowDepth="2"/>
         </Border.Effect>
         <Grid MouseEnter="Grid_MouseEnter" MouseLeave="Grid_MouseLeave" Margin="2,0,2,0"  >
 
@@ -52,8 +52,8 @@
                         <GridViewColumn Header="Ctr." Width="28" >
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Click="StatusButton_Click"  Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="20"  Height="20"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Hide">
-                                        <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
+                                    <Button Click="StatusButton_Click" MouseDoubleClick="StatusButton_MouseDoubleClick" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Loaded="StatusButton_Loaded" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="22"  Height="22"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Hide" >
+                                        <Image Source="{Binding ImageSource}" Opacity="{Binding ImageAlpha}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
                                     </Button>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -70,7 +70,7 @@
                         <GridViewColumn Header="Note" Width="100" x:Name="mGridColumnNote">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <RichTextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged" ScrollViewer.CanContentScroll="False" ScrollViewer.IsDeferredScrollingEnabled="False" PreviewKeyDown="TextBoxList_PreviewKeyDown"
+                                    <RichTextBox Name="TextBoxList" Background="#01FFFFFF" FontSize="13" AcceptsReturn="True" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" TextChanged="TextBoxList_TextChanged"  PreviewKeyDown="TextBoxList_PreviewKeyDown"
                                          GotFocus="TextBoxList_GotFocus" LostFocus="TextBoxList_LostFocus" Loaded="TextBoxList_Loaded" AcceptsTab="True" BorderBrush="Transparent">
                                         <!--RichTextBox.Style>
                                             <Style TargetType="TextBox">

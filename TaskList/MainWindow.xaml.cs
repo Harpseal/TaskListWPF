@@ -39,28 +39,33 @@ namespace TaskList
         public TaskStatus Status { get; set; }
         public DateTime TimeStart { get; set; }
         public double TimeTotalSeconds { get; set; }
-        public string TimeStr { get; set; }
         public string NoteValue { get; set; }
+        public bool IsAlwaysShow { get; set; }
 
         public void UpdateStatus(TaskStatus status)
         {
             Status = status;
+        }
+        public TaskItemBase()
+        {
+            IsAlwaysShow = false;
         }
     }
  
     public class TaskItem : INotifyPropertyChanged
     {
         public TaskItemBase mBase { get; }
+        private string mTimeStr;
         public string TimeStr {
             get
             {
-                return mBase.TimeStr;
+                return mTimeStr;
             }
             set
             {
-                if (value != this.mBase.TimeStr)
+                if (value != mTimeStr)
                 {
-                    this.mBase.TimeStr = value;
+                    mTimeStr = value;
                     NotifyPropertyChanged();
                 }
             }
@@ -123,8 +128,6 @@ namespace TaskList
                 }
             }
         }
-
-
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -189,6 +192,17 @@ namespace TaskList
             }
         }
 
+        public double ImageAlpha
+        {
+            get
+            {
+                if (mBase.IsAlwaysShow)
+                    return 1.0;
+                else
+                    return 0.75;
+            }
+        }
+
         public TaskItem(TaskItemBase itemBase)
         {
             mBase = itemBase;
@@ -201,9 +215,9 @@ namespace TaskList
             mBase = new TaskItemBase();
             mBase.TimeStart = DateTime.Now;
             mBase.TimeTotalSeconds = 0;
-            mBase.TimeStr = "00.00";
             mBase.NoteValue = "note";
             mBase.UpdateStatus(TaskStatus.IDLE);
+            mTimeStr = "00.00";
         }
 
         public TaskItem(TaskStatus status, string note)
@@ -211,9 +225,9 @@ namespace TaskList
             mBase = new TaskItemBase();
             mBase.TimeStart = DateTime.Now;
             mBase.TimeTotalSeconds = 0;
-            mBase.TimeStr = "00.00";
             mBase.NoteValue = note;
             mBase.UpdateStatus(status);
+            mTimeStr = "00.00";
         }
 
         public TaskItem(TaskStatus status, DateTime timeStart, string note)
@@ -221,15 +235,35 @@ namespace TaskList
             mBase = new TaskItemBase();
             mBase.TimeStart = timeStart;
             mBase.TimeTotalSeconds = 0;
-            mBase.TimeStr = "00.00";
             mBase.NoteValue = note;
             mBase.UpdateStatus(status);
+            mTimeStr = "00.00";
         }
 
         public void UpdateStatus(TaskStatus status)
         {
             if (mBase == null) return;
             mBase.UpdateStatus(status);
+        }
+
+        
+
+        public bool IsPending() { return Note.StartsWith("[P]"); }
+        public bool IsOneLine() { return Note.StartsWith("..."); }
+        public bool IsAlwaysShow
+        {
+            get
+            {
+                return mBase.IsAlwaysShow;
+            }
+            set
+            {
+                if (value != this.mBase.IsAlwaysShow)
+                {
+                    this.mBase.IsAlwaysShow = value;
+                    NotifyPropertyChanged();
+                }
+            }
         }
 
     }
@@ -549,7 +583,7 @@ namespace TaskList
             if (mResetFocusCountdown > 0)
             {
                 mResetFocusCountdown -= mTimer.Interval;
-                Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown);
+                Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown + " " + btnFold.IsMouseOver);
                 if (mResetFocusCountdown<=0)
                 {
                     if (mFocusedTextBox != null)
@@ -780,7 +814,7 @@ namespace TaskList
             TaskItem item = text != null ? text.DataContext as TaskItem : null;
             if (item != null)
             {
-                mDateTimePreTextChange = DateTime.Now;
+                //mDateTimePreTextChange = DateTime.Now;
                 if (e.LeftButton == MouseButtonState.Released)
                 {
                     MessageBoxResult result = MessageBox.Show("Do you want to reset the timer of task:\n\n" + item.Note + " ?",
@@ -863,7 +897,7 @@ namespace TaskList
                     imgFold.Visibility = btnFold.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
                 }
                 e.Handled = true;
-                mDateTimePreTextChange = DateTime.Now;
+                //mDateTimePreTextChange = DateTime.Now;
                 UpdateListViewTimer();
                 UpdateListViewTaskNote();
             }
@@ -878,54 +912,92 @@ namespace TaskList
                 TaskItemMouseDown(item, e);
         }
 
+
+        private void StatusButton_Loaded(object sender, RoutedEventArgs e)
+        {
+            Button btn = sender as Button;
+            TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
+            if (item != null)
+            {
+                btn.Background = item.IsAlwaysShow ? Brushes.LightPink : Brushes.Transparent;
+                //btn.BorderBrush = item.IsAlwaysShow ? Brushes.Red : Brushes.Transparent;
+            }
+        }
+
+        private DateTime mStatusButtonTime = DateTime.Now;
         private void StatusButton_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            mStatusButtonTime = DateTime.Now;
             Button btn = sender as Button;
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
             if (item != null)
                 TaskItemMouseDown(item, e);
         }
 
-
-        private void StatusButton_Click(object sender, RoutedEventArgs e)
+        private void StatusButton_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            double downTimeSec = (DateTime.Now - mStatusButtonTime).TotalSeconds;
+            Console.WriteLine("StatusButton_MouseDoubleClick downTimeSec : " + downTimeSec + " sec");
             Button btn = sender as Button;
             TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
             if (item != null)
             {
-                int idx = mTaskItemAllCollection.IndexOf(item);
+                item.IsAlwaysShow = !item.IsAlwaysShow;
+                StatusButton_Loaded(btn, e);
+            }
+        }
 
-                switch (item.Status)
+        private void StatusButton_Click(object sender, RoutedEventArgs e)
+        {
+            double downTimeSec = (DateTime.Now - mStatusButtonTime).TotalSeconds;
+            Console.WriteLine("StatusButton_Click downTimeSec : " + downTimeSec + " sec");
+            Button btn = sender as Button;
+
+            TaskItem item = btn != null ? btn.DataContext as TaskItem : null;
+            if (item != null)
+            {
+                if (downTimeSec > 0.25)
                 {
-                    case TaskStatus.IDLE:
-                        item.UpdateStatus(TaskStatus.WORKING);
-                        item.TimeStart = DateTime.Now;
-                        item.TimeTotal = TimeSpan.Zero;
-                        break;
-                    case TaskStatus.WORKING:
-                        item.UpdateStatus(TaskStatus.PASUE);
-                        item.TimeTotal += DateTime.Now - item.TimeStart;
-                        break;
-                    case TaskStatus.PASUE:
-                        item.UpdateStatus(TaskStatus.WORKING);
-                        item.TimeStart = DateTime.Now;
-                        break;
-                    case TaskStatus.STOP:
-                        item.UpdateStatus(TaskStatus.IDLE);
-                        item.TimeTotal = TimeSpan.Zero;
-                        break;
-
+                    item.IsAlwaysShow = !item.IsAlwaysShow;
+                    StatusButton_Loaded(btn, e);
+                    //btn.Background = item.IsAlwaysShow ? Brushes.WhiteSmoke : Brushes.Transparent;
                 }
-                //Console.WriteLine(item.Status.ToString());
-                Console.WriteLine("mAutoSaveCountdown Button_Click");
-                if (mMenuAutoSaveSkipStatusChanges.IsChecked == false)
-                    mAutoSaveCountdown = mAutoSaveCountdownTotal;
+                else
+                {
+                    int idx = mTaskItemAllCollection.IndexOf(item);
 
-                //System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
-                //view.Refresh();
+                    switch (item.Status)
+                    {
+                        case TaskStatus.IDLE:
+                            item.UpdateStatus(TaskStatus.WORKING);
+                            item.TimeStart = DateTime.Now;
+                            item.TimeTotal = TimeSpan.Zero;
+                            break;
+                        case TaskStatus.WORKING:
+                            item.UpdateStatus(TaskStatus.PASUE);
+                            item.TimeTotal += DateTime.Now - item.TimeStart;
+                            break;
+                        case TaskStatus.PASUE:
+                            item.UpdateStatus(TaskStatus.WORKING);
+                            item.TimeStart = DateTime.Now;
+                            break;
+                        case TaskStatus.STOP:
+                            item.UpdateStatus(TaskStatus.IDLE);
+                            item.TimeTotal = TimeSpan.Zero;
+                            break;
 
-                UpdateTitle();
-                UpdateListViewTimer();
+                    }
+                    //Console.WriteLine(item.Status.ToString());
+                    Console.WriteLine("mAutoSaveCountdown Button_Click");
+                    if (mMenuAutoSaveSkipStatusChanges.IsChecked == false)
+                        mAutoSaveCountdown = mAutoSaveCountdownTotal;
+
+                    //System.ComponentModel.ICollectionView view = CollectionViewSource.GetDefaultView(mListView.ItemsSource);
+                    //view.Refresh();
+
+                    UpdateTitle();
+                    UpdateListViewTimer();
+                }
             }
         }
 
@@ -965,7 +1037,7 @@ namespace TaskList
             {
                 mTaskItemWorkingCollection.Clear();
                 foreach (var item in mTaskItemAllCollection)
-                    if (item.Status == TaskStatus.WORKING)
+                    if (item.Status == TaskStatus.WORKING || item.IsAlwaysShow)
                         mTaskItemWorkingCollection.Add(item);
                 mListView.ItemsSource = mTaskItemWorkingCollection;
             }
@@ -1042,9 +1114,10 @@ namespace TaskList
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            bool isTpying = (DateTime.Now - mDateTimePreTextChange).TotalSeconds < 1;
-            Console.WriteLine("" + e.PreviousSize.Width + " -> " + e.NewSize.Width + " " + this.IsLoaded + " " + this.IsActive + " isTpying " + isTpying);
-            if (this.IsActive && !isTpying)
+            //bool isTpying = !btnFold.IsMouseOver;// TaskBoxkList_GetIsEditing();// (DateTime.Now - mDateTimePreTextChange).TotalSeconds < 1;
+            //mDateTimePreTextChange = DateTime.Now;
+            Console.WriteLine("" + e.PreviousSize.Width + " -> " + e.NewSize.Width + " " + this.IsLoaded + " " + this.IsActive + " btnFold.IsMouseOver " + btnFold.IsMouseOver);
+            if (this.IsActive && btnFold.IsMouseOver)
                 this.Left += e.PreviousSize.Width - e.NewSize.Width;
         }
 
@@ -1074,6 +1147,7 @@ namespace TaskList
             //foreach (var task in mTaskItemAllCollection)
             foreach (TaskItem task in mListView.Items)
             {
+                if (!TaskBoxkList_GetIsEditing() && (task.IsPending() || task.IsOneLine())) continue;
                 Size strSize = MeasureString(task.Note);
                 if (maxWidth < strSize.Width)
                     maxWidth = strSize.Width;
@@ -1081,7 +1155,7 @@ namespace TaskList
 
             //Point relativePoint = textBox.TransformToAncestor(this).Transform(new Point(maxWidth, 0));
 
-            double newWidth = Math.Max(MinNoteWidth, maxWidth + 20);
+            double newWidth = Math.Max(MinNoteWidth, maxWidth + 40);
             if (mListGridView.Columns.Count > 0)
             {
                 mListGridView.Columns[mListGridView.Columns.Count - 1].Width = newWidth;
@@ -1089,7 +1163,7 @@ namespace TaskList
             //Console.WriteLine("UpdateListView max: " + maxWidth + "  new: " + newWidth  + "[" + mEditingTextBox.Text);
         }
 
-        private DateTime mDateTimePreTextChange = DateTime.Now;
+        //private DateTime mDateTimePreTextChange = DateTime.Now;
         private void TextBoxList_TextChanged(object sender, TextChangedEventArgs e)
         {
             RichTextBox rtBox = sender as RichTextBox;
@@ -1112,7 +1186,7 @@ namespace TaskList
 
 
             }
-            mDateTimePreTextChange = DateTime.Now;
+            //mDateTimePreTextChange = DateTime.Now;
 
             mResetFocusCountdown = 5000;
             if (mAutoSaveCountdown != 0)
@@ -1205,20 +1279,27 @@ namespace TaskList
         }
 
 
-        private void UpdateRichTextBox(RichTextBox rtbox, string text, bool isBold)
+        private void UpdateRichTextBox(RichTextBox rtbox, TaskItem task, bool isEditing)
         {
             if (rtbox == null) return;
+            string text = task.Note;
             text = text.TrimEnd(Environment.NewLine.ToCharArray());
 
+
+            bool isPending = !isEditing && task.IsPending();
+            bool isOneLine = !isEditing && task.IsOneLine();
+            rtbox.Height = isPending || isOneLine ? 22 : Double.NaN;
+
             bool isUpdated = false;
-            if (isBold)
+            if (!isEditing)
             {
                 MatchCollection matches = Regex.Matches(text, mTextBoxRegexInput.Text);
                 if (matches.Count > 0)// && mNoteTypeFace != null
                 {
                     isUpdated = true;
-                    Paragraph para = new Paragraph();
+                    Paragraph para = new Paragraph() { Foreground = isPending? new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90)) : Brushes.Black };
                     int pos = 0;
+
 
                     foreach (Match m in matches)
                     {
@@ -1229,7 +1310,7 @@ namespace TaskList
                     }
 
                     if (pos + 1 < text.Length)
-                        para.Inlines.Add(new Run(text.Substring(pos, text.Length - 1 - pos)));
+                        para.Inlines.Add(new Run(text.Substring(pos, text.Length - pos)));
                     rtbox.Document.Blocks.Clear();
                     rtbox.Document.Blocks.Add(para);
                 }
@@ -1238,34 +1319,49 @@ namespace TaskList
             if (!isUpdated)
             {
                 rtbox.Document.Blocks.Clear();
-                rtbox.Document.Blocks.Add(new Paragraph(new Run(text)));
+                rtbox.Document.Blocks.Add(new Paragraph(new Run(text)) { Foreground = Brushes.Black });
             }
         }
 
         private string mFocusedText = "";
         private TextBox mFocusedTextBox = null;
         private RichTextBox mFocusedRichTextBox = null;
+        private bool TaskBoxkList_GetIsEditing()
+        {
+            return mFocusedTextBox != null || mFocusedRichTextBox != null;
+        }
         private void TextBoxList_GotFocus(object sender, RoutedEventArgs e)
         {
+            TextBox tmpTextBox = null;
+            RichTextBox tmpRichTextBox = null;
+
             mAutoSaveCountdown = mAutoSaveCountdownTotal;
 
             mFocusedText = "";
 
-            mFocusedTextBox = sender as TextBox;
-            if (mFocusedTextBox != null)
-                mFocusedText = mFocusedTextBox.Text;
-            mFocusedRichTextBox = sender as RichTextBox;
-            TaskItem item = mFocusedRichTextBox != null ? mFocusedRichTextBox.DataContext as TaskItem : null;
-            if (mFocusedRichTextBox != null && item != null)
+            tmpTextBox = sender as TextBox;
+            if (tmpTextBox != null)
+                mFocusedText = tmpTextBox.Text;
+            tmpRichTextBox = sender as RichTextBox;
+            TaskItem item = tmpRichTextBox != null ? tmpRichTextBox.DataContext as TaskItem : null;
+
+            mFocusedTextBox = tmpTextBox;
+            mFocusedRichTextBox = tmpRichTextBox;
+
+            if (tmpRichTextBox != null && item != null)
             {
-                //mFocusedRichTextBox.Document.Blocks.Clear();
-                //mFocusedRichTextBox.Document.Blocks.Add(new Paragraph(new Run(item.Note)));
-                UpdateRichTextBox(mFocusedRichTextBox, item.Note, false);
+                //tmpRichTextBox.Document.Blocks.Clear();
+                //tmpRichTextBox.Document.Blocks.Add(new Paragraph(new Run(item.Note)));
+                UpdateRichTextBox(tmpRichTextBox, item, true);
                 mFocusedText = item.Note;
             }
 
             mTimer.Stop();
+
+
         }
+
+
 
         private void TextBoxList_LostFocus(object sender, RoutedEventArgs e)
         {
@@ -1284,7 +1380,7 @@ namespace TaskList
                 {
                     string richText = new TextRange(mFocusedRichTextBox.Document.ContentStart, mFocusedRichTextBox.Document.ContentEnd).Text.TrimEnd(Environment.NewLine.ToCharArray());
                     item.Note = richText;
-                    UpdateRichTextBox(mFocusedRichTextBox, item.Note, true);
+                    UpdateRichTextBox(mFocusedRichTextBox, item, false);
 
                     //MatchCollection matches = Regex.Matches(richText, "\\[[^\\n\\r]*?\\]");
                     //if (matches.Count > 0 && mNoteTypeFace != null)
@@ -1310,6 +1406,7 @@ namespace TaskList
             }
             mFocusedTextBox = null;
             mFocusedRichTextBox = null;
+            UpdateListViewTaskNote();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1373,7 +1470,7 @@ namespace TaskList
             TaskItem item = rtBox != null ? rtBox.DataContext as TaskItem : null;
             if (rtBox != null && item != null)
             {
-                UpdateRichTextBox(rtBox, item.Note, true);
+                UpdateRichTextBox(rtBox, item, false);
                 //rtBox.Document.Blocks.Clear();
                 //rtBox.Document.Blocks.Add(new Paragraph(new Run(item.Note)));
             }
@@ -1510,6 +1607,7 @@ namespace TaskList
             TaskList.Properties.Settings.Default.RegexBold = mTextBoxRegexInput.Text;
             TaskList.Properties.Settings.Default.Save();
         }
+
 
     }
 }

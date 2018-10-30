@@ -27,6 +27,19 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="NormalButtonStyle" BasedOn="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" TargetType="Button">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#80FFFFFF"></Setter>
+                <Setter Property="BorderBrush" Value="Black"></Setter>
+            </Trigger>
+            <!--Trigger Property="IsMouseOver" Value="False">
+                <Setter Property="Background" Value="#00FFFFFF"></Setter>
+                <Setter Property="BorderBrush" Value="#00FFFFFF"></Setter>
+            </Trigger-->
+        </Style.Triggers>
+    </Style>
+    
     <ControlTemplate x:Key="{x:Static MenuItem.TopLevelHeaderTemplateKey}"
                  TargetType="MenuItem">
         <Border Name="Border" >
