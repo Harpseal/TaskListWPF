@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TaskList"
         mc:Ignorable="d" WindowStyle="None"
-        Title="Task List" Height="350" Width="525" SizeChanged="Window_SizeChanged" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing" ShowInTaskbar="False" 
+        Title="Task List" Height="350" Width="525" SizeChanged="Window_SizeChanged" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing" Activated="Window_Activated" ShowInTaskbar="False" 
         AllowsTransparency="True"  Background="Transparent">
     <Window.Resources>
         <ResourceDictionary>
@@ -53,7 +53,7 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Click="StatusButton_Click" MouseDoubleClick="StatusButton_MouseDoubleClick" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Loaded="StatusButton_Loaded" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="22"  Height="22"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Hide" >
-                                        <Image Source="{Binding ImageSource}" Opacity="{Binding ImageAlpha}" HorizontalAlignment="Center" VerticalAlignment="Top" Width="20"  Height="20" />
+                                        <Image Source="{Binding ImageSource}" Opacity="{Binding ImageAlpha}" HorizontalAlignment="Center" VerticalAlignment="Top"  />
                                     </Button>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -254,7 +254,7 @@
                     </Grid>
                 </ToggleButton>
 
-                <Button Grid.Column="6" x:Name="btnClose" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnClose_Click" Height="24" ToolTip="Close" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove" BorderBrush="Transparent">
+                <Button Grid.Column="6" x:Name="btnClose" Visibility="Visible" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="24" Click="btnClose_Click" Height="24" ToolTip="L:Close R:Min" Margin="0" Padding="0" PreviewMouseLeftButtonDown="OnButtonMove_MouseDown" PreviewMouseMove="OnButtonMove_MouseMove" BorderBrush="Transparent" PreviewMouseRightButtonDown="ButtonClose_PreviewMouseRightButtonDown">
                     <Image Source="Resource/Icons/baseline_clear_black_36dp.png" Stretch="Fill" Height="auto" Width="auto" />
                 </Button>
             </Grid>

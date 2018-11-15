@@ -369,41 +369,6 @@ namespace TaskList
             }
 
 
-            mNotifyIcon = new System.Windows.Forms.NotifyIcon();
-
-            Stream iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/TaskList;component/Resource/Icons/baseline_work_outline_black_36dp_icon.ico")).Stream;
-            mNotifyIcon.Icon = new System.Drawing.Icon(iconStream);
-
-            mNotifyIcon.Visible = true;
-            mNotifyIcon.DoubleClick +=
-                delegate (object sender, EventArgs args)
-                {
-                    this.ShowInTaskbar = !this.ShowInTaskbar;
-                };
-
-            mNotifyIcon.MouseClick += delegate (object sender, System.Windows.Forms.MouseEventArgs e) {
-                if (e.Button == System.Windows.Forms.MouseButtons.Right)
-                {
-                    MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
-                      "Confirmation",
-                      MessageBoxButton.YesNo,
-                      MessageBoxImage.Question);
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        this.Close();
-                    }
-                }
-                else
-                {
-                    this.Show();
-                    this.WindowState = WindowState.Normal;
-                    this.Activate();
-                    if (btnAlwaysOnTop.IsChecked == true)
-                        this.Topmost = true;
-
-                }
-            };
-
             UpdateTitle();
 
             mNoteTypeFace = new Typeface(new FontFamily("Microsoft JhengHei"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
@@ -651,8 +616,40 @@ namespace TaskList
             }
          }
 
+        ////use this flag to maximize process window.
+        //const int SW_SHOWMAXIMIZED = 3;
+        ////use this flag to open process window normally.
+        //const int SW_SHOWNORMAL = 1;
+        //const int SW_SHOW = 5;
+        //const int SW_RESTORE = 9;
+
+        //[System.Runtime.InteropServices.DllImport("user32.dll")]
+        //static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        //[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, ExactSpelling = true)]
+        //public static extern IntPtr SetFocus(System.Runtime.InteropServices.HandleRef hWnd);
+
+        //[System.Runtime.InteropServices.DllImport("user32.dll")]
+        //static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        //[System.Runtime.InteropServices.DllImport("user32.dll")]
+        //static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        //static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        //static readonly IntPtr HWND_TOP = new IntPtr(0);
+        //const UInt32 SWP_NOSIZE = 0x0001;
+        //const UInt32 SWP_NOMOVE = 0x0002;
+        //const UInt32 SWP_SHOWWINDOW = 0x0040;
+        //const UInt32 SWP_ASYNCWINDOWPOS = 0x4000;
+
+        //[System.Runtime.InteropServices.DllImport("user32.dll")]
+        //public static extern int MessageBox(int hWnd, String text, String caption, uint type);
+
+        private bool m_isCloseWithoutSave = false;
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+
+
             btnAlwaysOnTop.IsChecked = TaskList.Properties.Settings.Default.AlwaysOnTop;
 
             mMenuAutoSaveSkipStatusChanges.IsChecked = TaskList.Properties.Settings.Default.EnableAutoSaveSkipStatusChanges;
@@ -677,6 +674,64 @@ namespace TaskList
             mProgressBarAutoSave.Visibility = (mMenuAutoSave.IsChecked == true && mMenuAutoSaveShowProgress.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
 
             mSBAniOut.Begin(gridControlPanel);
+
+
+
+            System.Diagnostics.Process proc = System.Diagnostics.Process.GetCurrentProcess();
+            var procList = System.Diagnostics.Process.GetProcesses().Where(p =>
+                             p.ProcessName == proc.ProcessName && p.Id != proc.Id);
+            //proc.Proc
+            if (procList.Count() >= 1)
+            {
+                //foreach (var p in procList)
+                //{
+                //    SetWindowPos(p.MainWindowHandle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                //    //ShowWindow(p.MainWindowHandle, 1);
+                //    //SetFocus(new System.Runtime.InteropServices.HandleRef(null, p.MainWindowHandle));
+                //    //SetForegroundWindow(p.MainWindowHandle);
+                //}
+                MessageBox.Show("Already an instance is running...","Warning",MessageBoxButton.OK,MessageBoxImage.Warning,MessageBoxResult.OK,MessageBoxOptions.ServiceNotification);
+                m_isCloseWithoutSave = true;
+                App.Current.Shutdown();
+                //this.Close();
+                return;
+            }
+
+            mNotifyIcon = new System.Windows.Forms.NotifyIcon();
+
+            Stream iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/TaskList;component/Resource/Icons/baseline_work_outline_black_36dp_icon.ico")).Stream;
+            mNotifyIcon.Icon = new System.Drawing.Icon(iconStream);
+
+            mNotifyIcon.Visible = true;
+            mNotifyIcon.DoubleClick +=
+                delegate (object s, EventArgs args)
+                {
+                    this.ShowInTaskbar = !this.ShowInTaskbar;
+                    TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
+                };
+
+            mNotifyIcon.MouseClick += delegate (object s, System.Windows.Forms.MouseEventArgs me) {
+                if (me.Button == System.Windows.Forms.MouseButtons.Right)
+                {
+                    MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
+                      "Confirmation",
+                      MessageBoxButton.YesNo,
+                      MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        this.Close();
+                    }
+                }
+                else
+                {
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                    if (btnAlwaysOnTop.IsChecked == true)
+                        this.Topmost = true;
+
+                }
+            };
         }
 
 
@@ -698,7 +753,6 @@ namespace TaskList
             stream.Close();
             TaskList.Properties.Settings.Default.TaskListBase64 = Convert.ToBase64String(arr);
 
-            TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
             TaskList.Properties.Settings.Default.AlwaysOnTop = btnAlwaysOnTop.IsChecked == true;
             TaskList.Properties.Settings.Default.WindowRestoreBounds = this.RestoreBounds.ToString();
             TaskList.Properties.Settings.Default.Save();
@@ -1144,10 +1198,12 @@ namespace TaskList
         {
             double maxWidth = MinNoteWidth;
 
+            TaskItem item = TaskBoxkList_GetEditingItem();
             //foreach (var task in mTaskItemAllCollection)
             foreach (TaskItem task in mListView.Items)
             {
-                if (!TaskBoxkList_GetIsEditing() && (task.IsPending() || task.IsOneLine())) continue;
+                //if (task != item && !TaskBoxkList_GetIsEditing() && (task.IsPending() || task.IsOneLine())) continue;
+                if (task != item && (task.IsPending() || task.IsOneLine())) continue;
                 Size strSize = MeasureString(task.Note);
                 if (maxWidth < strSize.Width)
                     maxWidth = strSize.Width;
@@ -1167,7 +1223,7 @@ namespace TaskList
         private void TextBoxList_TextChanged(object sender, TextChangedEventArgs e)
         {
             RichTextBox rtBox = sender as RichTextBox;
-            if (rtBox != null)
+            if (rtBox != null && mFocusedRichTextBox != null)
             {
                 TaskItem item = rtBox != null ? rtBox.DataContext as TaskItem : null;
 
@@ -1290,6 +1346,7 @@ namespace TaskList
             bool isOneLine = !isEditing && task.IsOneLine();
             rtbox.Height = isPending || isOneLine ? 22 : Double.NaN;
 
+            int num = 1;
             bool isUpdated = false;
             if (!isEditing)
             {
@@ -1305,7 +1362,13 @@ namespace TaskList
                     {
                         if (pos < m.Index)
                             para.Inlines.Add(new Run(text.Substring(pos, m.Index - pos)));
-                        para.Inlines.Add(new Bold(new Run(text.Substring(m.Index, m.Length))));
+                        string boldStr = text.Substring(m.Index, m.Length);
+                        if (boldStr.Equals("#. "))
+                        {
+                            boldStr = boldStr.Replace("#", (num++).ToString());
+                        }
+                        Console.WriteLine("{" + boldStr + "}");
+                        para.Inlines.Add(new Bold(new Run(boldStr)));
                         pos = m.Index + m.Length;
                     }
 
@@ -1329,6 +1392,10 @@ namespace TaskList
         private bool TaskBoxkList_GetIsEditing()
         {
             return mFocusedTextBox != null || mFocusedRichTextBox != null;
+        }
+        private TaskItem TaskBoxkList_GetEditingItem()
+        {
+            return mFocusedRichTextBox != null ? mFocusedRichTextBox.DataContext as TaskItem : null;
         }
         private void TextBoxList_GotFocus(object sender, RoutedEventArgs e)
         {
@@ -1380,8 +1447,11 @@ namespace TaskList
                 {
                     string richText = new TextRange(mFocusedRichTextBox.Document.ContentStart, mFocusedRichTextBox.Document.ContentEnd).Text.TrimEnd(Environment.NewLine.ToCharArray());
                     item.Note = richText;
-                    UpdateRichTextBox(mFocusedRichTextBox, item, false);
-
+                    RichTextBox tmptrBox = mFocusedRichTextBox;
+                    mFocusedRichTextBox = null; ;
+                    Console.WriteLine("LostFocus 0 [" + item.Note + "]");
+                    UpdateRichTextBox(tmptrBox, item, false);
+                    Console.WriteLine("LostFocus 1 [" + item.Note + "]");
                     //MatchCollection matches = Regex.Matches(richText, "\\[[^\\n\\r]*?\\]");
                     //if (matches.Count > 0 && mNoteTypeFace != null)
                     //{
@@ -1417,7 +1487,8 @@ namespace TaskList
                 mFocusedRichTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
             //foreach (var item in mTaskItemAllCollection)
             //    Console.WriteLine(item.Note);
-            SaveTaskList();
+            if (!m_isCloseWithoutSave)
+                SaveTaskList();
 
             if (mNotifyIcon != null)
             {
@@ -1602,12 +1673,24 @@ namespace TaskList
             
             if (sender != mTextBoxRegexInput)
             {
-                mTextBoxRegexInput.Text = "(\\[[^\\n\\r]*?\\]|\\s{1}\\d\\.|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})";
+                mTextBoxRegexInput.Text = "(\\[[^\\n\\r]*?\\]|\\d+\\.\\s{1}|#\\.\\s{1}|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})";
             }
             TaskList.Properties.Settings.Default.RegexBold = mTextBoxRegexInput.Text;
             TaskList.Properties.Settings.Default.Save();
         }
 
+        private void ButtonClose_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            this.ShowInTaskbar = true;
+            this.WindowState = WindowState.Minimized;
+        }
 
+        private void Window_Activated(object sender, EventArgs e)
+        {
+            //Console.WriteLine("Window_Activated");
+            this.ShowInTaskbar = TaskList.Properties.Settings.Default.ShowInTaskbar;
+            if (btnAlwaysOnTop.IsChecked == true)
+                this.Topmost = true;
+        }
     }
 }
