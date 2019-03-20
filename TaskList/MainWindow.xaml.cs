@@ -852,10 +852,22 @@ namespace TaskList
                 // Move item into observable collection 
                 // (this will be automatically reflected to lstView.ItemsSource)
                 e.Effects = DragDropEffects.Move;
-                index = mTaskItemAllCollection.IndexOf(item);
-                if (mStartIndex >= 0 && index >= 0)
+
+                if (btnFold.IsChecked == true)
                 {
-                    mTaskItemAllCollection.Move(mStartIndex, index);
+                    index = mTaskItemWorkingCollection.IndexOf(item);
+                    if (mStartIndex >= 0 && index >= 0)
+                    {
+                        mTaskItemWorkingCollection.Move(mStartIndex, index);
+                    }
+                }
+                else
+                {
+                    index = mTaskItemAllCollection.IndexOf(item);
+                    if (mStartIndex >= 0 && index >= 0)
+                    {
+                        mTaskItemAllCollection.Move(mStartIndex, index);
+                    }
                 }
                 mStartIndex = -1;        // Done!
             }
@@ -1086,6 +1098,7 @@ namespace TaskList
 
             imgUnfold.Visibility = isFolding == true ? Visibility.Collapsed : Visibility.Visible;
             imgFold.Visibility = isFolding == false ? Visibility.Collapsed : Visibility.Visible;
+            btnFold.ToolTip = isFolding == true ? "Unfold" : "Fold";
 
             if (isFolding)
             {
