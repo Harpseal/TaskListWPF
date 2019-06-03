@@ -192,5 +192,9 @@
     <Resource Include="Resource\Icons\baseline_toggle_off_black_36dp_dark.png" />
     <Resource Include="Resource\Icons\baseline_toggle_on_black_36dp_green.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resource\Icons\baseline_check_box_black_36dp.png" />
+    <Resource Include="Resource\Icons\baseline_check_box_outline_blank_black_36dp.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -29,5 +29,8 @@
     <Setting Name="RegexBold" Type="System.String" Scope="User">
       <Value Profile="(Default)">(\[[^\n\r]*?\]|\s{1}\d\.|\s{1}[\*,@,#,\+,\-,&gt;]\s{1})</Value>
     </Setting>
+    <Setting Name="EnableTimer" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

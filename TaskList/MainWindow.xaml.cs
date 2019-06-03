@@ -42,6 +42,8 @@ namespace TaskList
         public string NoteValue { get; set; }
         public bool IsAlwaysShow { get; set; }
 
+        public bool IsCheckable { get; set; }
+
         public void UpdateStatus(TaskStatus status)
         {
             Status = status;
@@ -49,6 +51,7 @@ namespace TaskList
         public TaskItemBase()
         {
             IsAlwaysShow = false;
+            IsCheckable = false;
         }
     }
  
@@ -80,6 +83,20 @@ namespace TaskList
                 if (value != this.mBase.Status)
                 {
                     this.mBase.Status = value;
+                    NotifyPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsCheckable
+        {
+            get
+            { return mBase.IsCheckable; }
+            set
+            {
+                if (value != this.mBase.IsCheckable)
+                {
+                    this.mBase.IsCheckable = value;
                     NotifyPropertyChanged();
                 }
             }
@@ -175,18 +192,18 @@ namespace TaskList
                 //string imageUri = "pack://application:,,,/TaskList;component/Resource/Icons/";
                 //string imageUri = "pack://application:,,,/component/Resource/Icons/";
                 string path = "Resource/Icons/";
+
                 switch (mBase.Status)
                 {
-
                     case TaskStatus.WORKING:
-                        path += "baseline_pause_black_36dp.png"; break;
+                        path += (mBase.IsCheckable)? "baseline_check_box_black_36dp.png" : "baseline_pause_black_36dp.png"; break;
                     case TaskStatus.PASUE:
-                        path += "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                     case TaskStatus.STOP:
-                        path += "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                     case TaskStatus.IDLE:
                     default:
-                        path += "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                 }
                 return path;
             }
@@ -298,6 +315,7 @@ namespace TaskList
             mTaskItemWorkingCollection = new ObservableCollection<TaskItem>();
 
             this.ShowInTaskbar = TaskList.Properties.Settings.Default.ShowInTaskbar;
+            mIsTimerEnable = TaskList.Properties.Settings.Default.EnableTimer;
             string taskListBase64 = TaskList.Properties.Settings.Default.TaskListBase64;
             if (taskListBase64.Length != 0)
             {
@@ -482,6 +500,7 @@ namespace TaskList
             return nWorking;
         }
 
+        private bool mIsTimerEnable = true;
         private const double MinTimeWidth = 40;
         private const double MidTimeWidth = 45;
         private const double MaxTimeWidth = 55;
@@ -502,7 +521,9 @@ namespace TaskList
                 }
                 //timeDiff += new TimeSpan(9,4, 0);
                 //int totalSeconds = (int)timeDiff.TotalSeconds;
-                if (timeDiff.TotalMinutes < 60)
+                if (!mIsTimerEnable)
+                    item.TimeStr = "";
+                else if (timeDiff.TotalMinutes < 60)
                     item.TimeStr = timeDiff.ToString(@"mm\:ss");
                 else if (timeDiff.TotalHours >= 24)
                 { 
@@ -523,7 +544,9 @@ namespace TaskList
             if (mListGridView.Columns.Count >= 2)
             {
                 double oldWidth = mListGridView.Columns[1].Width;
-                if (isMaxTimeWidth)
+                if (!mIsTimerEnable)
+                    mListGridView.Columns[1].Width = 0;
+                else if (isMaxTimeWidth)
                 {
                     if (oldWidth != MaxTimeWidth)
                         mListGridView.Columns[1].Width = MaxTimeWidth;
@@ -702,36 +725,90 @@ namespace TaskList
             Stream iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/TaskList;component/Resource/Icons/baseline_work_outline_black_36dp_icon.ico")).Stream;
             mNotifyIcon.Icon = new System.Drawing.Icon(iconStream);
 
+            mNotifyIcon.ContextMenu = new System.Windows.Forms.ContextMenu();
+
+            System.Windows.Forms.MenuItem menuItem;
+            menuItem = new System.Windows.Forms.MenuItem();
+            menuItem.Index = -1;
+            menuItem.Text = "Save";
+            menuItem.Click += new System.EventHandler((s,args)=> { MenuItem_Click(mMenuSave, null); });
+            mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+
+            menuItem = new System.Windows.Forms.MenuItem();
+            menuItem.Index = -1;
+            menuItem.Text = "Load";
+            menuItem.Click += new System.EventHandler((s, args) => { MenuItem_Click(mMenuLoad, null); });
+            mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+
+            menuItem = new System.Windows.Forms.MenuItem();
+            menuItem.Index = -1;
+            menuItem.Text = (this.ShowInTaskbar?"Hide":"Show") + " in taskbar";
+            menuItem.Click += new System.EventHandler((s, args) => {
+                System.Windows.Forms.MenuItem item = s as System.Windows.Forms.MenuItem;
+                this.ShowInTaskbar = !this.ShowInTaskbar;
+                if (item != null)
+                    item.Text = (this.ShowInTaskbar ? "Hide" : "Show") + " in taskbar";
+                TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
+            });
+            mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+
+
+            menuItem = new System.Windows.Forms.MenuItem();
+            menuItem.Index = -1;
+            menuItem.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
+            menuItem.Click += new System.EventHandler((s, args) =>
+            {
+                System.Windows.Forms.MenuItem item = s as System.Windows.Forms.MenuItem;
+
+                mIsTimerEnable = !mIsTimerEnable;
+                foreach (var i in mTaskItemAllCollection)
+                    i.IsCheckable = !mIsTimerEnable;
+                UpdateListViewTimer();
+                TaskList.Properties.Settings.Default.EnableTimer = mIsTimerEnable;
+
+                if (item != null)
+                    item.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
+            });
+            mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+
+
+            //
+            menuItem = new System.Windows.Forms.MenuItem();
+            menuItem.Index = -1;
+            menuItem.Text = "Exit";
+            menuItem.Click += new System.EventHandler((s, args) => { MenuItem_Click(mMenuExit, null); });
+            mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+
             mNotifyIcon.Visible = true;
-            mNotifyIcon.DoubleClick +=
-                delegate (object s, EventArgs args)
-                {
-                    this.ShowInTaskbar = !this.ShowInTaskbar;
-                    TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
-                };
+            //mNotifyIcon.DoubleClick +=
+            //    delegate (object s, EventArgs args)
+            //    {
+            //        this.ShowInTaskbar = !this.ShowInTaskbar;
+            //        TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
+            //    };
 
-            mNotifyIcon.MouseClick += delegate (object s, System.Windows.Forms.MouseEventArgs me) {
-                if (me.Button == System.Windows.Forms.MouseButtons.Right)
-                {
-                    MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
-                      "Confirmation",
-                      MessageBoxButton.YesNo,
-                      MessageBoxImage.Question);
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        this.Close();
-                    }
-                }
-                else
-                {
-                    this.Show();
-                    this.WindowState = WindowState.Normal;
-                    this.Activate();
-                    if (btnAlwaysOnTop.IsChecked == true)
-                        this.Topmost = true;
+            //mNotifyIcon.MouseClick += delegate (object s, System.Windows.Forms.MouseEventArgs me) {
+            //    if (me.Button == System.Windows.Forms.MouseButtons.Right)
+            //    {
+            //        MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
+            //          "Confirmation",
+            //          MessageBoxButton.YesNo,
+            //          MessageBoxImage.Question);
+            //        if (result == MessageBoxResult.Yes)
+            //        {
+            //            this.Close();
+            //        }
+            //    }
+            //    else
+            //    {
+            //        this.Show();
+            //        this.WindowState = WindowState.Normal;
+            //        this.Activate();
+            //        if (btnAlwaysOnTop.IsChecked == true)
+            //            this.Topmost = true;
 
-                }
-            };
+            //    }
+            //};
         }
 
 
@@ -1280,6 +1357,7 @@ namespace TaskList
             if (btn == btnAdd)
             {
                 TaskItem itemNew = new TaskItem(TaskStatus.IDLE, "Task " + mTaskItemAllCollection.Count);
+                itemNew.IsCheckable = !mIsTimerEnable;
                 mTaskItemAllCollection.Insert(0, itemNew);
                 if (mTaskItemWorkingCollection != null)
                     mTaskItemWorkingCollection.Insert(0, itemNew);
@@ -1306,6 +1384,7 @@ namespace TaskList
                 if (mTaskItemUndoList.Count > 0)
                 {
                     TaskItem item = mTaskItemUndoList[mTaskItemUndoList.Count - 1];
+                    item.IsCheckable = !mIsTimerEnable;
                     mTaskItemAllCollection.Add(item);
                     if (mTaskItemWorkingCollection != null)
                         mTaskItemWorkingCollection.Add(item);
@@ -1577,7 +1656,7 @@ namespace TaskList
                         mTaskItemAllCollection.Clear();
                         foreach (var item in listBase)
                         {
-                            mTaskItemAllCollection.Add(new TaskItem(item));
+                            mTaskItemAllCollection.Add(new TaskItem(item) { IsCheckable = mIsTimerEnable });
                         }
                         UpdateTitle();
                         btnFold.IsChecked = false;
