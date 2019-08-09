@@ -53,7 +53,13 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Click="StatusButton_Click" MouseDoubleClick="StatusButton_MouseDoubleClick" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" Loaded="StatusButton_Loaded" Focusable="False" VerticalAlignment="Top" HorizontalAlignment="Right" Width="22"  Height="22"  Margin="-4,0,-4,0" Padding="0" PreviewMouseDown="StatusButton_PreviewMouseDown" ToolTip="R: Top, M: Hide" >
-                                        <Image Source="{Binding ImageSource}" Opacity="{Binding ImageAlpha}" HorizontalAlignment="Center" VerticalAlignment="Top"  />
+                                        <Button.Resources>
+                                            <Style TargetType="{x:Type Border}">
+                                                <Setter Property="CornerRadius" Value="7"/>
+                                            </Style>
+                                        </Button.Resources>
+
+                                        <Image Source="{Binding ImageSource}" Opacity="{Binding ImageAlpha}" HorizontalAlignment="Center" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality" />
                                     </Button>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -119,6 +125,10 @@
                     </GridView>
                 </ListView.View>
             </ListView>
+            <Grid x:Name="mGridListViewShot" Background="White" Visibility="Collapsed" IsHitTestVisible="False">
+                <Image x:Name="mImgListViewShot" RenderOptions.BitmapScalingMode="NearestNeighbor" IsHitTestVisible="False"></Image>
+            </Grid>
+            
 
             <ProgressBar Height="4" BorderThickness="0" Padding="0" Margin="0" x:Name="mProgressBarAutoSave" VerticalAlignment="Bottom" BorderBrush="{x:Null}" Foreground="#AA06B025" Background="{x:Null}" VerticalContentAlignment="Bottom"/>
             <Label Grid.Column="2" x:Name="mLabelTitle" Grid.ColumnSpan="2" Background="Transparent" Content="Task" HorizontalContentAlignment="Center" VerticalAlignment="Top" BorderBrush="Transparent">
@@ -151,6 +161,13 @@
                                 <MenuItem.Header>
                                     <StackPanel Orientation="Horizontal">
                                         <AccessText Foreground="Black" FontSize="14" VerticalAlignment="Center">_Load...</AccessText>
+                                    </StackPanel>
+                                </MenuItem.Header>
+                            </MenuItem>
+                            <MenuItem x:Name="mMenuShowTimer" Height="28" Click="MenuItem_Click">
+                                <MenuItem.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <AccessText  x:Name="mMenuShowTimerText" Foreground="Black" FontSize="14" VerticalAlignment="Center">_Exit</AccessText>
                                     </StackPanel>
                                 </MenuItem.Header>
                             </MenuItem>
@@ -191,7 +208,6 @@
                                 </MenuItem>
 
                             </MenuItem>
-                            <Separator />
                             <MenuItem Height="28" >
                                 <MenuItem.Header>
                                     <StackPanel Orientation="Horizontal">
@@ -209,6 +225,7 @@
                                     </MenuItem.Header>
                                 </MenuItem>
                             </MenuItem>
+
                             <Separator />
                             <MenuItem x:Name="mMenuExit" Height="28" Click="MenuItem_Click">
                                 <MenuItem.Icon>

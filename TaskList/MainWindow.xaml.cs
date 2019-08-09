@@ -140,11 +140,13 @@ namespace TaskList
             {
                 if (value != this.mBase.NoteValue)
                 {
+                    this.NoteRegexed = value;
                     this.mBase.NoteValue = value;
                     //NotifyPropertyChanged();
                 }
             }
         }
+        public string NoteRegexed = "";
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -196,14 +198,14 @@ namespace TaskList
                 switch (mBase.Status)
                 {
                     case TaskStatus.WORKING:
-                        path += (mBase.IsCheckable)? "baseline_check_box_black_36dp.png" : "baseline_pause_black_36dp.png"; break;
+                        path += (mBase.IsCheckable)? "baseline_radio_button_checked_black_36dp.png" : "baseline_pause_black_36dp.png"; break;
                     case TaskStatus.PASUE:
-                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_radio_button_unchecked_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                     case TaskStatus.STOP:
-                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_radio_button_unchecked_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                     case TaskStatus.IDLE:
                     default:
-                        path += (mBase.IsCheckable) ? "baseline_check_box_outline_blank_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
+                        path += (mBase.IsCheckable) ? "baseline_radio_button_unchecked_black_36dp.png" : "baseline_play_arrow_black_36dp.png"; break;
                 }
                 return path;
             }
@@ -302,7 +304,7 @@ namespace TaskList
 
         public const int MinNoteWidth = 120;
 
-        private const int mAutoSaveCountdownTotal =  5 * 60 * 1000; //5 mins
+        private const int mAutoSaveCountdownTotal = 5 * 60 * 1000; //5 mins
         private int mAutoSaveCountdown = 0;
         private int mResetFocusCountdown = 0;
 
@@ -326,7 +328,7 @@ namespace TaskList
                 ms.Position = 0;
 
                 List<TaskItemBase> baseList = new List<TaskItemBase>();
-                
+
                 try
                 {
                     baseList = bf.Deserialize(ms) as List<TaskItemBase>;
@@ -340,7 +342,7 @@ namespace TaskList
                 {
                     Console.WriteLine(se.ToString());
                 }
-                
+
 
             }
             mTaskItemUndoList = new List<TaskItem>();
@@ -485,11 +487,6 @@ namespace TaskList
                     nWorking++;
             mLabelTitle.Content = "Task (" + nWorking + "/" + mTaskItemAllCollection.Count + ")";
 
-            if (nWorking == 0 && mAutoSaveCountdown == 0 && mResetFocusCountdown == 0)
-                mTimer.Stop();
-            else if (!mTimer.Enabled)
-                mTimer.Start();
-
             btnRemove.IsEnabled = mListView.SelectedItem != null;
             if (btnRemove.IsEnabled)
                 btnRemove.Opacity = 1.0;
@@ -501,6 +498,7 @@ namespace TaskList
         }
 
         private bool mIsTimerEnable = true;
+        private System.Windows.Forms.MenuItem mMenuItemFormTimerEnable = null;
         private const double MinTimeWidth = 40;
         private const double MidTimeWidth = 45;
         private const double MaxTimeWidth = 55;
@@ -526,7 +524,7 @@ namespace TaskList
                 else if (timeDiff.TotalMinutes < 60)
                     item.TimeStr = timeDiff.ToString(@"mm\:ss");
                 else if (timeDiff.TotalHours >= 24)
-                { 
+                {
                     item.TimeStr = "23:59:59";
                     isMaxTimeWidth = true;
                 }
@@ -564,15 +562,55 @@ namespace TaskList
             }
         }
 
+        bool FreezeListView(int ms)
+        {
+            mGridListViewShot.Visibility = Visibility.Collapsed;
+
+            if (mListView.ActualWidth < 1 || mListView.ActualHeight < 1) return false;
+            RenderTargetBitmap renderTargetBitmap =
+                new RenderTargetBitmap((int)Math.Round(mListView.ActualWidth), (int)Math.Round(mListView.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            renderTargetBitmap.Render(mListView);
+            mImgListViewShot.Width = mListView.ActualWidth;
+            mImgListViewShot.Height = mListView.ActualHeight;
+            mImgListViewShot.Source = renderTargetBitmap;
+            mGridListViewShot.Visibility = Visibility.Visible;
+
+            new Thread(()=>{
+                Thread.Sleep(ms);
+                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() => {
+                    mImgListViewShot.Source = null;
+                    mGridListViewShot.Visibility = Visibility.Collapsed;
+                }));
+            }).Start();
+
+            
+
+            return true;
+        }
+
+        private DateTime mDateListViewUpdatePre = DateTime.Now;
+        private int mDateListViewUpdateIntervalMS = 500;
         void Timer_Tick(object sender, EventArgs e)
         {
-            UpdateListViewTimer();
+            if (TaskBoxkList_GetEditingItem() == null && (DateTime.Now - mDateListViewUpdatePre).TotalMilliseconds > mDateListViewUpdateIntervalMS )
+            {
+                FreezeListView(200);
+                UpdateListViewTimer();
+
+                mDateListViewUpdateIntervalMS += mTimer.Interval;
+                if (mDateListViewUpdateIntervalMS > 60000) mDateListViewUpdateIntervalMS = 60000;
+                Console.WriteLine("mDateListViewUpdateIntervalMS(0) " + mDateListViewUpdateIntervalMS);
+                mListView.Items.Refresh();
+                Console.WriteLine("mDateListViewUpdateIntervalMS(1) " + mDateListViewUpdateIntervalMS);
+                mDateListViewUpdatePre = DateTime.Now;
+            }
+
 
             if (mResetFocusCountdown > 0)
             {
                 mResetFocusCountdown -= mTimer.Interval;
                 Console.WriteLine("mResetFocusCountdown " + mResetFocusCountdown + " " + btnFold.IsMouseOver);
-                if (mResetFocusCountdown<=0)
+                if (mResetFocusCountdown <= 0)
                 {
                     if (mFocusedTextBox != null)
                     {
@@ -618,7 +656,7 @@ namespace TaskList
                     string savePath = TaskList.Properties.Settings.Default.AutoSavePath;
                     if (Directory.Exists(savePath))
                     {
-                        if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith(""+System.IO.Path.DirectorySeparatorChar))
+                        if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith("" + System.IO.Path.DirectorySeparatorChar))
                             savePath += System.IO.Path.DirectorySeparatorChar;// System.IO.Path.PathSeparator;
                         savePath += "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + "_autosave.xml";
 
@@ -637,7 +675,7 @@ namespace TaskList
                     }
                 }
             }
-         }
+        }
 
         ////use this flag to maximize process window.
         //const int SW_SHOWMAXIMIZED = 3;
@@ -713,7 +751,7 @@ namespace TaskList
                 //    //SetFocus(new System.Runtime.InteropServices.HandleRef(null, p.MainWindowHandle));
                 //    //SetForegroundWindow(p.MainWindowHandle);
                 //}
-                MessageBox.Show("Already an instance is running...","Warning",MessageBoxButton.OK,MessageBoxImage.Warning,MessageBoxResult.OK,MessageBoxOptions.ServiceNotification);
+                MessageBox.Show("Already an instance is running...", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning, MessageBoxResult.OK, MessageBoxOptions.ServiceNotification);
                 m_isCloseWithoutSave = true;
                 App.Current.Shutdown();
                 //this.Close();
@@ -731,7 +769,7 @@ namespace TaskList
             menuItem = new System.Windows.Forms.MenuItem();
             menuItem.Index = -1;
             menuItem.Text = "Save";
-            menuItem.Click += new System.EventHandler((s,args)=> { MenuItem_Click(mMenuSave, null); });
+            menuItem.Click += new System.EventHandler((s, args) => { MenuItem_Click(mMenuSave, null); });
             mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
 
             menuItem = new System.Windows.Forms.MenuItem();
@@ -742,7 +780,7 @@ namespace TaskList
 
             menuItem = new System.Windows.Forms.MenuItem();
             menuItem.Index = -1;
-            menuItem.Text = (this.ShowInTaskbar?"Hide":"Show") + " in taskbar";
+            menuItem.Text = (this.ShowInTaskbar ? "Hide" : "Show") + " in taskbar";
             menuItem.Click += new System.EventHandler((s, args) => {
                 System.Windows.Forms.MenuItem item = s as System.Windows.Forms.MenuItem;
                 this.ShowInTaskbar = !this.ShowInTaskbar;
@@ -758,18 +796,12 @@ namespace TaskList
             menuItem.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
             menuItem.Click += new System.EventHandler((s, args) =>
             {
-                System.Windows.Forms.MenuItem item = s as System.Windows.Forms.MenuItem;
+                MenuItem_Click(mMenuShowTimer, null);
 
-                mIsTimerEnable = !mIsTimerEnable;
-                foreach (var i in mTaskItemAllCollection)
-                    i.IsCheckable = !mIsTimerEnable;
-                UpdateListViewTimer();
-                TaskList.Properties.Settings.Default.EnableTimer = mIsTimerEnable;
-
-                if (item != null)
-                    item.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
             });
             mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
+            mMenuItemFormTimerEnable = menuItem;
+            mMenuShowTimerText.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
 
 
             //
@@ -780,35 +812,39 @@ namespace TaskList
             mNotifyIcon.ContextMenu.MenuItems.Add(menuItem);
 
             mNotifyIcon.Visible = true;
-            //mNotifyIcon.DoubleClick +=
-            //    delegate (object s, EventArgs args)
-            //    {
-            //        this.ShowInTaskbar = !this.ShowInTaskbar;
-            //        TaskList.Properties.Settings.Default.ShowInTaskbar = this.ShowInTaskbar;
-            //    };
+            mNotifyIcon.DoubleClick +=
+                delegate (object s, EventArgs args)
+                {
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                    if (btnAlwaysOnTop.IsChecked == true)
+                        this.Topmost = true;
+                };
 
-            //mNotifyIcon.MouseClick += delegate (object s, System.Windows.Forms.MouseEventArgs me) {
-            //    if (me.Button == System.Windows.Forms.MouseButtons.Right)
-            //    {
-            //        MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
-            //          "Confirmation",
-            //          MessageBoxButton.YesNo,
-            //          MessageBoxImage.Question);
-            //        if (result == MessageBoxResult.Yes)
-            //        {
-            //            this.Close();
-            //        }
-            //    }
-            //    else
-            //    {
-            //        this.Show();
-            //        this.WindowState = WindowState.Normal;
-            //        this.Activate();
-            //        if (btnAlwaysOnTop.IsChecked == true)
-            //            this.Topmost = true;
+            mNotifyIcon.MouseClick += delegate (object s, System.Windows.Forms.MouseEventArgs me)
+            {
+                //if (me.Button == System.Windows.Forms.MouseButtons.Right)
+                //{
+                //    MessageBoxResult result = MessageBox.Show("Do you want to close the task window ?",
+                //      "Confirmation",
+                //      MessageBoxButton.YesNo,
+                //      MessageBoxImage.Question);
+                //    if (result == MessageBoxResult.Yes)
+                //    {
+                //        this.Close();
+                //    }
+                //}
+                if (me.Button == System.Windows.Forms.MouseButtons.Left)
+                {
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                    if (btnAlwaysOnTop.IsChecked == true)
+                        this.Topmost = true;
 
-            //    }
-            //};
+                }
+            };
         }
 
 
@@ -855,7 +891,7 @@ namespace TaskList
                 try
                 {
                     current = VisualTreeHelper.GetParent(current);
-                }catch (System.InvalidOperationException ioe)
+                } catch (System.InvalidOperationException ioe)
                 {
                     Console.WriteLine(ioe.ToString());
                     current = null;
@@ -872,7 +908,7 @@ namespace TaskList
             if (mMainContextMenu.IsVisible == true) return;
             if (mFocusedRichTextBox != null || mFocusedTextBox != null)
                 return;
-                // Get the current mouse position
+            // Get the current mouse position
             Point mousePos = e.GetPosition(null);
             Vector diff = mStartPoint - mousePos;
 
@@ -1160,7 +1196,7 @@ namespace TaskList
 
             imgAlwaysOnTopUnlock.Visibility = btnAlwaysOnTop.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
             imgAlwaysOnTopLock.Visibility = btnAlwaysOnTop.IsChecked == false ? Visibility.Collapsed : Visibility.Visible;
-            btnAlwaysOnTop.ToolTip = "Always On Top (" + (btnAlwaysOnTop.IsChecked==true ? "enabled" : "disabled") + ")";
+            btnAlwaysOnTop.ToolTip = "Always On Top (" + (btnAlwaysOnTop.IsChecked == true ? "enabled" : "disabled") + ")";
         }
 
         private void btnFold_Click(object sender, RoutedEventArgs e)
@@ -1284,6 +1320,7 @@ namespace TaskList
             return new Size(formattedText.Width, formattedText.Height);
         }
 
+
         private void UpdateListViewTaskNote()
         {
             double maxWidth = MinNoteWidth;
@@ -1294,7 +1331,7 @@ namespace TaskList
             {
                 //if (task != item && !TaskBoxkList_GetIsEditing() && (task.IsPending() || task.IsOneLine())) continue;
                 if (task != item && (task.IsPending() || task.IsOneLine())) continue;
-                Size strSize = MeasureString(task.Note);
+                Size strSize = MeasureString(task.NoteRegexed);
                 if (maxWidth < strSize.Width)
                     maxWidth = strSize.Width;
             }
@@ -1334,7 +1371,6 @@ namespace TaskList
             }
             //mDateTimePreTextChange = DateTime.Now;
 
-            mResetFocusCountdown = 5000;
             if (mAutoSaveCountdown != 0)
                 mAutoSaveCountdown = mAutoSaveCountdownTotal;
             UpdateListViewTaskNote();
@@ -1417,8 +1453,8 @@ namespace TaskList
             mSBAniOut.Begin(gridControlPanel);
 
             mResetFocusCountdown = 5000;
-            if (!mTimer.Enabled)
-                mTimer.Start();
+            //if (!mTimer.Enabled)
+            //    mTimer.Start();
         }
 
         private void Grid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -1427,6 +1463,28 @@ namespace TaskList
         }
 
 
+        private static SolidColorBrush CvtPercentageToBrush(double percent)//0~1
+        {
+            if (percent < 0) percent = 0;
+            if (percent > 1) percent = 1;
+
+            percent *= 240;
+            int r = (int)((Math.Cos((percent + 0) / 180 * Math.PI) * 0.5 + 0.5) * 255); if (r > 255) r = 255;
+            int g = (int)((Math.Cos((percent + 240)/ 180 * Math.PI) * 0.5 + 0.5) * 255); if (g > 255) g = 255;
+            int b = (int)((Math.Cos((percent + 120)/ 180 * Math.PI) * 0.5 + 0.5) * 255); if (b > 255) b = 255;
+
+            const int baseColor = 400;
+            int sumColor = r + g + b;
+            if (sumColor > baseColor)
+            {
+                r = r * baseColor / sumColor;
+                g = g * baseColor / sumColor;
+                b = b * baseColor / sumColor;
+            }
+
+
+            return new SolidColorBrush(Color.FromRgb((byte)r, (byte)g, (byte)b));
+        }
         private void UpdateRichTextBox(RichTextBox rtbox, TaskItem task, bool isEditing)
         {
             if (rtbox == null) return;
@@ -1446,7 +1504,8 @@ namespace TaskList
                 if (matches.Count > 0)// && mNoteTypeFace != null
                 {
                     isUpdated = true;
-                    Paragraph para = new Paragraph() { Foreground = isPending? new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90)) : Brushes.Black };
+                    Brush foreColor = isPending ? new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90)) : Brushes.Black;
+                    Paragraph para = new Paragraph() { Foreground = foreColor };
                     int pos = 0;
 
 
@@ -1459,8 +1518,66 @@ namespace TaskList
                         {
                             boldStr = boldStr.Replace("#", (num++).ToString());
                         }
-                        Console.WriteLine("{" + boldStr + "}");
-                        para.Inlines.Add(new Bold(new Run(boldStr)));
+                        bool isDateParsed = false;
+                        DateTime date;
+                        if ((boldStr.StartsWith("(") && boldStr.EndsWith(")")))
+                        {
+                            
+                            //Console.WriteLine("([{" + boldStr.Substring(1, boldStr.Length-2) + "}])");
+
+                            string[] dateFmt = new string[] { "M/d", "M/d H", "M/d H:m", "yy/M/d", "yy/M/d H", "yy/M/d H:m", "yyyy/M/d", "yyyy/M/d H", "yyyy/M/d H:m" };
+
+                            if (DateTime.TryParseExact(boldStr.Substring(1, boldStr.Length - 2), dateFmt, null, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out date))
+                            {
+                                if (date.Hour == 0 && date.Minute == 0)
+                                    date += new TimeSpan(17, 30, 0);
+                                TimeSpan dateDiff = date - DateTime.Now;
+                                double days = dateDiff.TotalDays;
+                                double daysAbs = Math.Abs(dateDiff.TotalDays);
+
+                                //Console.WriteLine("{" + boldStr + "} => " + days.ToString("F2") + " days [" + date.ToString() + "]");
+
+                                if (daysAbs < 1000)
+                                {
+                                    if (daysAbs > 1)
+                                        boldStr = daysAbs.ToString("F2") + " day";
+                                    else if (daysAbs * 24 > 1)
+                                        boldStr = (daysAbs * 24).ToString("F2") + " hr";
+                                    else if (daysAbs * 24 * 60 > 1)
+                                    {
+                                        boldStr = (daysAbs * 24 * 60).ToString("F1") + " min";
+                                        if (mDateListViewUpdateIntervalMS > 5000)
+                                            mDateListViewUpdateIntervalMS = 5000;
+                                        //Console.WriteLine("mDateListViewUpdateIntervalMS(min) : " + mDateListViewUpdateIntervalMS);
+                                    }
+                                    else
+                                    {
+                                        boldStr = (daysAbs * 24 * 60 * 60).ToString("F0") + " sec";
+                                        if (mDateListViewUpdateIntervalMS > 100)
+                                            mDateListViewUpdateIntervalMS = 100;
+                                        //Console.WriteLine("mDateListViewUpdateIntervalMS(sec) : " + mDateListViewUpdateIntervalMS);
+                                    }
+
+                                        if (days < 0)
+                                        boldStr = "-" + boldStr;
+                                }
+                                else
+                                    boldStr = boldStr.Substring(1, boldStr.Length - 2);
+
+                                para.Inlines.Add(new Bold(new Run("(")));
+                                para.Inlines.Add(new Bold(new Run(boldStr)) { Foreground = CvtPercentageToBrush((days-1)/4) });
+                                para.Inlines.Add(new Bold(new Run(")")) { Foreground = foreColor });
+                                isDateParsed = true;
+                                //para.Inlines.Add(new Bold(new Run(boldStr)) { Foreground = foreColor });
+
+                            }
+
+
+                        }
+                        //else
+                        //    Console.WriteLine("{" + boldStr + "}");
+                        if (!isDateParsed)
+                            para.Inlines.Add(new Bold(new Run(boldStr)));
                         pos = m.Index + m.Length;
                     }
 
@@ -1468,6 +1585,8 @@ namespace TaskList
                         para.Inlines.Add(new Run(text.Substring(pos, text.Length - pos)));
                     rtbox.Document.Blocks.Clear();
                     rtbox.Document.Blocks.Add(para);
+
+                    task.NoteRegexed = new TextRange(rtbox.Document.ContentStart, rtbox.Document.ContentEnd).Text;
                 }
             }
 
@@ -1515,7 +1634,7 @@ namespace TaskList
                 mFocusedText = item.Note;
             }
 
-            mTimer.Stop();
+            //mTimer.Stop();
 
 
         }
@@ -1603,6 +1722,7 @@ namespace TaskList
                 Keyboard.ClearFocus();
                 mListView.SelectedItem = null;
             }
+            mResetFocusCountdown = 5000;
         }
 
         private Typeface mNoteTypeFace = null;
@@ -1644,6 +1764,18 @@ namespace TaskList
         {
             if (sender == mMenuExit)
                 this.Close();
+            else if (sender == mMenuShowTimer)
+            {
+                mIsTimerEnable = !mIsTimerEnable;
+                foreach (var i in mTaskItemAllCollection)
+                    i.IsCheckable = !mIsTimerEnable;
+                UpdateListViewTimer();
+                TaskList.Properties.Settings.Default.EnableTimer = mIsTimerEnable;
+
+                mMenuShowTimerText.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
+                if (mMenuItemFormTimerEnable != null)
+                    mMenuItemFormTimerEnable.Text = (mIsTimerEnable ? "Hide" : "Show") + " timer";
+            }
             else if (sender == mMenuLoad)
             {
                 Microsoft.Win32.OpenFileDialog openFileDialog = new Microsoft.Win32.OpenFileDialog();
@@ -1674,7 +1806,7 @@ namespace TaskList
             }
             else if (sender == mMenuSave)
             {
-                
+
                 Microsoft.Win32.SaveFileDialog saveFileDialog = new Microsoft.Win32.SaveFileDialog();
                 saveFileDialog.Filter = "Xml file (*.xml)|*.xml|All file (*.*)|*.*";
                 saveFileDialog.FileName = "task_" + DateTime.Now.ToString("yyMMdd_HHmmss") + "_" + mTaskItemAllCollection.Count.ToString("00") + ".xml";
@@ -1698,7 +1830,7 @@ namespace TaskList
                     mAutoSaveCountdown = 0;
                     mProgressBarAutoSave.Visibility = Visibility.Collapsed;
                 }
-                else if (mMenuAutoSave.IsChecked && 
+                else if (mMenuAutoSave.IsChecked &&
                     (TaskList.Properties.Settings.Default.AutoSavePath.Length == 0 || !Directory.Exists(TaskList.Properties.Settings.Default.AutoSavePath)))
                 {
                     using (var dialog = new System.Windows.Forms.FolderBrowserDialog())
@@ -1736,7 +1868,7 @@ namespace TaskList
                         string savePath = dialog.SelectedPath;
                         if (!savePath.EndsWith("/") && !savePath.EndsWith("\\") && !savePath.EndsWith("" + System.IO.Path.DirectorySeparatorChar))
                             savePath += System.IO.Path.DirectorySeparatorChar;// System.IO.Path.PathSeparator;
-                        
+
                         Console.WriteLine("mMenuAutoSave path exist? " + Directory.Exists(savePath));
 
                         TaskList.Properties.Settings.Default.AutoSavePath = savePath;
@@ -1765,7 +1897,7 @@ namespace TaskList
             
             if (sender != mTextBoxRegexInput)
             {
-                mTextBoxRegexInput.Text = "(\\[[^\\n\\r]*?\\]|\\d+\\.\\s{1}|#\\.\\s{1}|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})";
+                mTextBoxRegexInput.Text = "(\\[[^\\n\\r]*?\\]|\\([^\\n\\r]*?\\)|\\d+\\.\\s{1}|#\\.\\s{1}|\\s{1}[\\*,@,#,\\+,\\-,>]\\s{1})";
             }
             TaskList.Properties.Settings.Default.RegexBold = mTextBoxRegexInput.Text;
             TaskList.Properties.Settings.Default.Save();
