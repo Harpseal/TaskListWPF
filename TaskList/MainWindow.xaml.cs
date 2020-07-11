@@ -1371,8 +1371,8 @@ namespace TaskList
             }
             //mDateTimePreTextChange = DateTime.Now;
 
-            if (mAutoSaveCountdown != 0)
-                mAutoSaveCountdown = mAutoSaveCountdownTotal;
+            //if (mAutoSaveCountdown != 0)
+            //    mAutoSaveCountdown = mAutoSaveCountdownTotal;
             UpdateListViewTaskNote();
 
         }
